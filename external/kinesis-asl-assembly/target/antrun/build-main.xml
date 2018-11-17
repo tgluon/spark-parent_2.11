@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<project name="maven-antrun-" default="main"  >
+<target name="main">
+  <mkdir dir="/home/hadoop/spark2.11/spark-2.1.1/external/kinesis-asl-assembly/target/tmp"/>
+</target>
+</project>

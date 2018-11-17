@@ -1,0 +1,163 @@
+#!/usr/bin/env bash
+
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# [ -a FILE ] 如果 FILE 存在则为真。
+# [ -b FILE ] 如果 FILE 存在且是一个块特殊文件则为真。
+# [ -c FILE ] 如果 FILE 存在且是一个字特殊文件则为真。
+# [ -d FILE ] 如果 FILE 存在且是一个目录则为真。
+# [ -e FILE ] 如果 FILE 存在则为真。
+# [ -f FILE ] 如果 FILE 存在且是一个普通文件则为真。
+# [ -g FILE ] 如果 FILE 存在且已经设置了SGID则为真。
+# [ -h FILE ] 如果 FILE 存在且是一个符号连接则为真。
+# [ -k FILE ] 如果 FILE 存在且已经设置了粘制位则为真。
+# [ -p FILE ] 如果 FILE 存在且是一个名字管道(F如果O)则为真。
+# [ -r FILE ] 如果 FILE 存在且是可读的则为真。
+# [ -s FILE ] 如果 FILE 存在且大小不为o则为真。
+# [ -t FD ] 如果文件描述符 FD 打开且指向一个终端则为真。
+# [ -u FILE ] 如果 FILE 存在且设置了SUID (set user ID)则为真。
+# [ -w FILE ] 如果 FILE 如果 FILE 存在且是可写的则为真。
+# [ -x FILE ] 如果 FILE 存在且是可执行的则为真。
+# [ -O FILE ] 如果 FILE 存在且属有效用户ID则为真。
+# [ -G FILE ] 如果 FILE 存在且属有效用户组则为真。
+# [ -L FILE ] 如果 FILE 存在且是一个符号连接则为真。
+# [ -N FILE ] 如果 FILE 存在 and has been mod如果ied since it was last read则为真。
+# [ -S FILE ] 如果 FILE 存在且是一个套接字则为真。
+# [ FILE1 -nt FILE2 ] 如果 FILE1 has been changed more recently than FILE2, or 如果 FILE1 exists and FILE2 does not则为真。
+# [ FILE1 -ot FILE2 ] 如果 FILE1 比 FILE2 要老, 或者 FILE2 存在且 FILE1 不存在则为真。
+# [ FILE1 -ef FILE2 ] 如果 FILE1 和 FILE2 指向相同的设备和节点号则为真。
+# [ -o OPTIONNAME ] 如果 shell选项 “OPTIONNAME” 开启则为真。
+# [ -z STRING ] “STRING” 的长度为零则为真。
+# [ -n STRING ] or [ STRING ] “STRING” 的长度为非零 non-zero则为真。
+# [ STRING1 == STRING2 ] 如果2个字符串相同。 “=” may be used instead of “==” for strict POSIX compliance则为真。
+# [ STRING1 != STRING2 ] 如果字符串不相等则为真。
+# [ STRING1 < STRING2 ] 如果 “STRING1” sorts before “STRING2” lexicographically in the current locale则为真。
+# [ STRING1 > STRING2 ] 如果 “STRING1” sorts after “STRING2” lexicographically in the current locale则为真。
+
+
+# 检查设置SPARK_HOME的值
+if [ -z "${SPARK_HOME}" ]; then
+# $0:获取当前执行脚本的文件名,包括路径.
+  source "$(dirname "$0")"/find-spark-home
+fi
+
+# 执行load-spark-env.sh脚本文件，主要目的在于加载设定一些变量值
+# 设定spark-env.sh中的变量值到环境变量中，供后续使用
+# 设定scala版本变量值
+. "${SPARK_HOME}"/bin/load-spark-env.sh
+
+# Find the java binary
+# 检查设定java环境值
+# -n代表检测变量长度是否为0，不为0时候为真
+# 如果已经安装Java没有设置JAVA_HOME,command -v java返回的值为${JAVA_HOME}/bin/java
+if [ -n "${JAVA_HOME}" ]; then
+  RUNNER="${JAVA_HOME}/bin/java"
+else
+  if [ "$(command -v java)" ]; then
+    RUNNER="java"
+  else
+    echo "JAVA_HOME is not set" >&2
+    exit 1
+  fi
+fi
+
+# Find Spark jars.
+# -d检测文件是否为目录，若为目录则为真
+# 设置一些关联Class文件
+if [ -d "${SPARK_HOME}/jars" ]; then
+  SPARK_JARS_DIR="${SPARK_HOME}/jars"
+else
+  SPARK_JARS_DIR="${SPARK_HOME}/assembly/target/scala-$SPARK_SCALA_VERSION/jars"
+fi
+
+#　如果不是目录并且"$SPARK_TESTING$SPARK_SQL_TESTING"得到的结果字符串长度为０
+if [ ! -d "$SPARK_JARS_DIR" ] && [ -z "$SPARK_TESTING$SPARK_SQL_TESTING" ]; then
+  echo "Failed to find Spark jars directory ($SPARK_JARS_DIR)." 1>&2
+  echo "You need to build Spark with the target \"package\" before running this program." 1>&2
+  exit 1
+else
+  LAUNCH_CLASSPATH="$SPARK_JARS_DIR/*"
+fi
+
+# Add the launcher build dir to the classpath if requested.
+if [ -n "$SPARK_PREPEND_CLASSES" ]; then
+  LAUNCH_CLASSPATH="${SPARK_HOME}/launcher/target/scala-$SPARK_SCALA_VERSION/classes:$LAUNCH_CLASSPATH"
+fi
+
+# For tests
+# shell 脚本if判断多个条件
+# 如果a>b且a<c
+# if (( a > b )) && (( a < c ))
+# 或者
+# if [[ $a > $b ]] && [[ $a < $c ]]
+# 或者
+# if [ $a -gt $b -a $a -lt $c ]
+
+if [[ -n "$SPARK_TESTING" ]]; then
+# unset命令用于删除变量或函数
+  unset YARN_CONF_DIR
+  unset HADOOP_CONF_DIR
+fi
+
+# The launcher library will print arguments separated by a NULL character, to allow arguments with
+# characters that would be otherwise interpreted by the shell. Read that in a while loop, populating
+# an array that will be used to exec the final command.
+#
+# The exit code of the launcher is appended to the output, so the parent shell removes it from the
+# command array and checks the value to see if the launcher succeeded.
+
+# java -cp 和 -classpath 一样,是指定类运行所依赖其他类的路径,通常是类库,jar包之类,需要全路径到jar包,window上分号“;”
+# 格式：
+# java -cp .;myClass.jar packname.mainclassname
+# 表达式支持通配符，例如：
+# java -cp .;c:\classes01\myClass.jar;c:\classes02\*.jar  packname.mainclassname
+# java -jar myClass.jar
+# 执行该命令时,会用到目录META-INF\MANIFEST.MF文件,在该文件中,有一个叫Main－Class的参数，它说明了java -jar命令执行的类。
+# 用maven导出的包中,如果没有在pom文件中将依赖包打进去,是没有依赖包。
+# 1.打包时指定了主类,可以直接用java -jar xxx.jar。
+# 2.打包是没有指定主类,可以用java -cp xxx.jar 主类名称（绝对路径）。
+# 3.要引用其他的jar包,可以用java -classpath $CLASSPATH:xxxx.jar 主类名称(绝对路径)其中 -classpath 指定需要引入的类。
+
+#执行类文件org.apache.spark.launcher.Main，返回解析后的参数
+build_command() {
+  "$RUNNER" -Xmx128m -cp "$LAUNCH_CLASSPATH" org.apache.spark.launcher.Main "$@"
+  printf "%d\0" $?
+}
+
+CMD=()
+while IFS= read -d '' -r ARG; do
+  CMD+=("$ARG")
+done < <(build_command "$@")
+
+COUNT=${#CMD[@]}
+LAST=$((COUNT - 1))
+LAUNCHER_EXIT_CODE=${CMD[$LAST]}
+
+# Certain JVM failures result in errors being printed to stdout (instead of stderr), which causes
+# the code that parses the output of the launcher to get confused. In those cases, check if the
+# exit code is an integer, and if it's not, handle it as a special error case.
+if ! [[ $LAUNCHER_EXIT_CODE =~ ^[0-9]+$ ]]; then
+  echo "${CMD[@]}" | head -n-1 1>&2
+  exit 1
+fi
+
+if [ $LAUNCHER_EXIT_CODE != 0 ]; then
+  exit $LAUNCHER_EXIT_CODE
+fi
+
+CMD=("${CMD[@]:0:$LAST}")
+# 执行CMD中的某个参数类org.apache.spark.deploy.SparkSubmit
+exec "${CMD[@]}"
