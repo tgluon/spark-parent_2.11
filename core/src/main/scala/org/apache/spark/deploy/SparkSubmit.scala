@@ -25,7 +25,6 @@ import java.security.PrivilegedExceptionAction
 import scala.annotation.tailrec
 import scala.collection.mutable.{ArrayBuffer, HashMap, Map}
 import scala.util.Properties
-
 import org.apache.commons.lang3.StringUtils
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.security.UserGroupInformation
@@ -40,13 +39,14 @@ import org.apache.ivy.core.settings.IvySettings
 import org.apache.ivy.plugins.matcher.GlobPatternMatcher
 import org.apache.ivy.plugins.repository.file.FileRepository
 import org.apache.ivy.plugins.resolver.{ChainResolver, FileSystemResolver, IBiblioResolver}
-
 import org.apache.spark.{SPARK_REVISION, SPARK_VERSION, SparkException, SparkUserAppException}
 import org.apache.spark.{SPARK_BRANCH, SPARK_BUILD_DATE, SPARK_BUILD_USER, SPARK_REPO_URL}
 import org.apache.spark.api.r.RUtils
 import org.apache.spark.deploy.rest._
 import org.apache.spark.launcher.SparkLauncher
 import org.apache.spark.util.{ChildFirstURLClassLoader, MutableURLClassLoader, Utils}
+
+import scala.collection.mutable
 
 /**
   * Whether to submit, kill, or request the status of an application.
@@ -131,7 +131,7 @@ object SparkSubmit {
       // scalastyle:on println
     }
     appArgs.action match {
-      //   执行这一句，转到submit方法
+      // 执行这一句，转到submit方法
       case SparkSubmitAction.SUBMIT => submit(appArgs)
       case SparkSubmitAction.KILL => kill(appArgs)
       case SparkSubmitAction.REQUEST_STATUS => requestStatus(appArgs)
@@ -237,7 +237,7 @@ object SparkSubmit {
     // Return values
     val childArgs = new ArrayBuffer[String]()
     val childClasspath = new ArrayBuffer[String]()
-    val sysProps = new HashMap[String, String]()
+    val sysProps = new mutable.HashMap[String, String]()
     var childMainClass = ""
 
     // Set the cluster manager
@@ -705,11 +705,16 @@ object SparkSubmit {
         new MutableURLClassLoader(new Array[URL](0),
           Thread.currentThread.getContextClassLoader)
       }
+    // 线程默认类加载器加入不设置采用的是系统类加载器，线程上下文类加载器会基础父类加载器
     Thread.currentThread.setContextClassLoader(loader)
-
+    //  只有在client模式下，用户的jar，--jars上传的jar全部被打包到loader的classpath里面，所以，只要不少包，
+    // 无论隐式因引用其他包的类还是现实引用，都会被找到
+    // --jars参数指定的jars在yarncluster模式下，直接是被封装到childArgs里面了，传递给了yarn client
     for (jar <- childClasspath) {
       addJarToClasspath(jar, loader)
     }
+    // standalone此处设置的系统属性，在启动RestSubmitClient，yarn.client.YarnClientSchedulerBackend
+    // 会被下面执行的new SparkConf操作获取使用或者分装成
 
     for ((key, value) <- sysProps) {
       System.setProperty(key, value)
@@ -718,6 +723,7 @@ object SparkSubmit {
     var mainClass: Class[_] = null
 
     try {
+      // 这里的类加载器采用的是上面设置的类加载器加载类
       mainClass = Utils.classForName(childMainClass)
     } catch {
       case e: ClassNotFoundException =>

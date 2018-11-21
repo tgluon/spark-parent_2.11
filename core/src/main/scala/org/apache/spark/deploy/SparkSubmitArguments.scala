@@ -27,10 +27,11 @@ import java.util.jar.JarFile
 import scala.collection.JavaConverters._
 import scala.collection.mutable.{ArrayBuffer, HashMap}
 import scala.io.Source
-
 import org.apache.spark.deploy.SparkSubmitAction._
 import org.apache.spark.launcher.SparkSubmitArgumentsParser
 import org.apache.spark.util.Utils
+
+import scala.collection.mutable
 
 /**
  * Parses and encapsulates arguments from the spark-submit script.
@@ -79,8 +80,8 @@ private[deploy] class SparkSubmitArguments(args: Seq[String], env: Map[String, S
   var useRest: Boolean = true // used internally
 
   /** Default properties present in the currently defined defaults file. */
-  lazy val defaultSparkProperties: HashMap[String, String] = {
-    val defaultProperties = new HashMap[String, String]()
+  lazy val defaultSparkProperties: mutable.HashMap[String, String] = {
+    val defaultProperties = new mutable.HashMap[String, String]()
     // scalastyle:off println
     if (verbose) SparkSubmit.printStream.println(s"Using properties file: $propertiesFile")
     Option(propertiesFile).foreach { filename =>
