@@ -768,6 +768,7 @@ object SparkSubmit {
     }
 
     try {
+      // 执行main函数,进入RestSubmissionClient类的main方法
       mainMethod.invoke(null, childArgs.toArray)
     } catch {
       case t: Throwable =>
