@@ -150,6 +150,8 @@ private[rest] class StandaloneSubmitRequestServlet(
     val extraJavaOpts = driverExtraJavaOptions.map(Utils.splitCommandString).getOrElse(Seq.empty)
     val sparkJavaOpts = Utils.sparkJavaOpts(conf)
     val javaOpts = sparkJavaOpts ++ extraJavaOpts
+    // 执行DriverWrapper这个类
+    // 直接执行的是这个封装类，通过自定义urlClassLoader指定classpath的方式加载用户的jar，然后通过反射执行。
     val command = new Command(
       "org.apache.spark.deploy.worker.DriverWrapper",
       Seq("{{WORKER_URL}}", "{{USER_JAR}}", mainClass) ++ appArgs, // args to the DriverWrapper

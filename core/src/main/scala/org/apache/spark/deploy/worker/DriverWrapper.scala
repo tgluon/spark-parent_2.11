@@ -50,6 +50,7 @@ object DriverWrapper {
           } else {
             new MutableURLClassLoader(Array(userJarUrl), currentLoader)
           }
+
         Thread.currentThread.setContextClassLoader(loader)
 
         // Delegate to supplied main class
