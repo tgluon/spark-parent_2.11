@@ -115,7 +115,7 @@ private[rest] class StandaloneSubmitRequestServlet(
 
   /**
    * Build a driver description from the fields specified in the submit request.
-   *
+   * 构建Driver描述信息
    * This involves constructing a command that takes into account memory, java options,
    * classpath and other settings to launch the driver. This does not currently consider
    * fields used by python applications since python is not supported in standalone
@@ -175,6 +175,7 @@ private[rest] class StandaloneSubmitRequestServlet(
       case submitRequest: CreateSubmissionRequest =>
         val driverDescription = buildDriverDescription(submitRequest)
         val response = masterEndpoint.askWithRetry[DeployMessages.SubmitDriverResponse](
+          // 正式向Master提交SubmitDriver的请求 直接到Master类 case RequestSubmitDriver
           DeployMessages.RequestSubmitDriver(driverDescription))
         val submitResponse = new CreateSubmissionResponse
         submitResponse.serverSparkVersion = sparkVersion

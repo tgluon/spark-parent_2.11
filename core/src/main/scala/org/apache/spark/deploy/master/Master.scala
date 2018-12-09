@@ -203,7 +203,7 @@ private[deploy] class Master(
     persistenceEngine.close()
     leaderElectionAgent.stop()
   }
-
+// 选举leader
   override def electedLeader() {
     self.send(ElectedLeader)
   }
@@ -426,7 +426,7 @@ private[deploy] class Master(
 
   }
 
-  //接收和回复注册
+  // 接收和回复注册
   override def receiveAndReply(context: RpcCallContext): PartialFunction[Any, Unit] = {
     case RegisterWorker(
     id, workerHost, workerPort, workerRef, cores, memory, workerWebUiUrl) =>
@@ -436,14 +436,14 @@ private[deploy] class Master(
       if (state == RecoveryState.STANDBY) {
         // 回复worker，master的状态是standby
         context.reply(MasterInStandby)
-        //注册失败,worker重复
+        // 注册失败,worker重复
       } else if (idToWorker.contains(id)) {
         context.reply(RegisterWorkerFailed("Duplicate worker ID"))
       } else {
         val worker = new WorkerInfo(id, workerHost, workerPort, cores, memory,
           workerRef, workerWebUiUrl)
         if (registerWorker(worker)) {
-          //使用持久化引擎，将worker进行持久化
+          // 使用持久化引擎，将worker进行持久化
           persistenceEngine.addWorker(worker)
           // 给以worker回复，并向worker注册
           context.reply(RegisteredWorker(self, masterWebUiUrl))
@@ -457,7 +457,7 @@ private[deploy] class Master(
             + workerAddress))
         }
       }
-
+     // 请求提交Driver
     case RequestSubmitDriver(description) =>
       if (state != RecoveryState.ALIVE) {
         val msg = s"${Utils.BACKUP_STANDALONE_MASTER_PREFIX}: $state. " +
@@ -469,10 +469,11 @@ private[deploy] class Master(
         persistenceEngine.addDriver(driver)
         waitingDrivers += driver
         drivers.add(driver)
+        // 调度
         schedule()
 
         // TODO: It might be good to instead have the submission client poll the master to determine
-        //       the current status of the driver. For now it's simply "fire and forget".
+        // the current status of the driver. For now it's simply "fire and forget".
 
         context.reply(SubmitDriverResponse(self, true, Some(driver.id),
           s"Driver successfully submitted as ${driver.id}"))
@@ -779,7 +780,7 @@ private[deploy] class Master(
     * every time a new app joins or resource availability changes.
     */
   private def schedule(): Unit = {
-    //首先判断,判断master状态不是ALIVE，直接返回，也就是说，standby master 是不会进行application等
+    // 首先判断,判断master状态不是ALIVE，直接返回，也就是说，standby master 是不会进行application等
     if (state != RecoveryState.ALIVE) {
       return
     }
@@ -821,7 +822,7 @@ private[deploy] class Master(
           waitingDrivers -= driver
           launched = true
         }
-        //将指针指向下一个worker
+        // 将指针指向下一个worker
         curPos = (curPos + 1) % numWorkersAlive
       }
     }
@@ -1105,17 +1106,17 @@ private[deploy] class Master(
     new DriverInfo(now, newDriverId(date), desc, date)
   }
 
-  //在某一个worker启动driver
+  // 在某一个Worker启动driver
   private def launchDriver(worker: WorkerInfo, driver: DriverInfo) {
     logInfo("Launching driver " + driver.id + " on worker " + worker.id)
-    //将driver加入worker内存的缓存结构
-    //将worker内使用的内存和cpu数量，都加上driver需要的内存和cpu数量
+    // 将driver加入worker内存的缓存结构
+    // 将worker内使用的内存和cpu数量，都加上driver需要的内存和cpu数量
     worker.addDriver(driver)
-    //同时把worker也加入到driver内部缓存结构中
+    // 同时把worker也加入到driver内部缓存结构中
     driver.worker = Some(worker)
-    //然后调用worker的endpoint，给它发送LunchDriver消息，让worker来启动Driver
+    // 然后调用worker的endpoint，给它发送LunchDriver消息，让worker来启动Driver
     worker.endpoint.send(LaunchDriver(driver.id, driver.desc))
-    //将driver的状态设置为RUNNING
+    // 将driver的状态设置为RUNNING
     driver.state = DriverState.RUNNING
   }
 

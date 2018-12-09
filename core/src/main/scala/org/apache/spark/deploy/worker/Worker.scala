@@ -492,14 +492,14 @@ private[deploy] class Worker(
             workerUri,
             conf,
             appLocalDirs, ExecutorState.RUNNING)
-          //将ExecutorRunner加入本地缓
+          // 将ExecutorRunner加入本地缓
           executors(appId + "/" + execId) = manager
-          //启动ExecutorRunner
+          // 启动ExecutorRunner
           manager.start()
-          //加上Executor使用资源
+          // 加上Executor使用资源
           coresUsed += cores_
           memoryUsed += memory_
-          //发送Executor状态信息给master
+          // 发送Executor状态信息给master
           sendToMaster(ExecutorStateChanged(appId, execId, manager.state, None, None))
         } catch {
           case e: Exception =>

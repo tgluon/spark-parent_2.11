@@ -36,6 +36,7 @@ import org.apache.spark.util.{Clock, ShutdownHookManager, SystemClock, Utils}
 
 /**
   * Manages the execution of one driver, including automatically restarting the driver on failure.
+  * 管理一个driver程序的执行，包括在失败时自动重启driver程序。
   * This is currently only used in standalone cluster deploy mode.
   */
 private[deploy] class DriverRunner(
@@ -77,10 +78,10 @@ private[deploy] class DriverRunner(
   }
 
   /** Starts a thread to run and manage the driver. */
-  //启动线程运行和管理driver
+  // 启动线程运行和管理driver
   private[worker] def start() = {
     new Thread("DriverRunner for " + driverId) {
-      //java线程
+      // java线程
       override def run() {
         var shutdownHook: AnyRef = null
         try {
@@ -110,7 +111,6 @@ private[deploy] class DriverRunner(
             ShutdownHookManager.removeShutdownHook(shutdownHook)
           }
         }
-
         // notify worker of final driver state, possible exception
         //通知worker dirver最终执行的状态
         worker.send(DriverStateChanged(driverId, finalState.get, finalException))
@@ -177,11 +177,11 @@ private[deploy] class DriverRunner(
     localJarFile.getAbsolutePath
   }
 
-  //准备运行和driver
+  // 准备运行和driver
   private[worker] def prepareAndRunDriver(): Int = {
-    //创建工作目录
+    // 创建工作目录
     val driverDir = createWorkingDirectory()
-    //下载jar到工作目录
+    // 下载jar到工作目录
     val localJarFilename = downloadUserJar(driverDir)
 
     def substituteVariables(argument: String): String = argument match {
@@ -191,15 +191,15 @@ private[deploy] class DriverRunner(
     }
 
     // TODO: If we add ability to submit multiple jars they should also be added here
-    //构建ProcessBuilder,传入driver的启动命令，需要内存大小信息
+    // 构建ProcessBuilder,传入driver的启动命令，需要内存大小信息
     val builder = CommandUtils.buildProcessBuilder(driverDesc.command, securityManager,
       driverDesc.mem, sparkHome.getAbsolutePath, substituteVariables)
-    //运行driver
+    // 运行driver
     runDriver(builder, driverDir, driverDesc.supervise)
   }
 
   private def runDriver(builder: ProcessBuilder, baseDir: File, supervise: Boolean): Int = {
-    //builder的基本目录
+    // builder的基本目录
     builder.directory(baseDir)
 
     def initialize(process: Process): Unit = {

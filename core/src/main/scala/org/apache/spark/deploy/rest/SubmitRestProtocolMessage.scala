@@ -58,6 +58,7 @@ private[rest] abstract class SubmitRestProtocolMessage {
     SubmitRestProtocolMessage.mapper.writeValueAsString(this)
   }
 
+
   /**
    * Assert the validity of the message.
    * If the validation fails, throw a [[SubmitRestProtocolException]].

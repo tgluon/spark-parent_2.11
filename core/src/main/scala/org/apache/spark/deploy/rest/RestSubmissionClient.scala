@@ -107,10 +107,13 @@ private[spark] class RestSubmissionClient(master: String) extends Logging {
     response
   }
 
+
   /** Request that the server kill the specified submission. */
   def killSubmission(submissionId: String): SubmitRestProtocolResponse = {
     logInfo(s"Submitting a request to kill submission $submissionId in $master.")
+
     var handled: Boolean = false
+
     var response: SubmitRestProtocolResponse = null
     for (m <- masters if !handled) {
       validateMaster(m)
@@ -407,13 +410,19 @@ private[spark] object RestSubmissionClient {
       appArgs: Array[String],
       conf: SparkConf,
       env: Map[String, String] = Map()): SubmitRestProtocolResponse = {
+
     val master = conf.getOption("spark.master").getOrElse {
       throw new IllegalArgumentException("'spark.master' must be set.")
     }
+
+
     val sparkProperties = conf.getAll.toMap
+
     val client = new RestSubmissionClient(master)
+
     val submitRequest = client.constructSubmitRequest(
       appResource, mainClass, appArgs, sparkProperties, env)
+    // 提交到StandaloneRestServer  handleSubmit
     client.createSubmission(submitRequest)
   }
 
@@ -424,9 +433,9 @@ private[spark] object RestSubmissionClient {
     }
     val appResource = args(0)
     val mainClass = args(1)
-    val appArgs = args.slice(2, args.length)
+    val appArgs = args.slice(2, args.length)// 用户的jar  mainClass
     val conf = new SparkConf
-    val env = filterSystemEnvironment(sys.env)
+    val env = filterSystemEnvironment(sys.env) // standalone mesos模式
     run(appResource, mainClass, appArgs, conf, env)
   }
 

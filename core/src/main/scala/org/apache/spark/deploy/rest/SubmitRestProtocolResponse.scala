@@ -26,6 +26,7 @@ private[rest] abstract class SubmitRestProtocolResponse extends SubmitRestProtoc
   var serverSparkVersion: String = null
   var success: Boolean = null
   var unknownFields: Array[String] = null
+
   protected override def doValidate(): Unit = {
     super.doValidate()
     assertFieldIsSet(serverSparkVersion, "serverSparkVersion")
