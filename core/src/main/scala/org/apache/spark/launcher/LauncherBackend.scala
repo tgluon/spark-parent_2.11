@@ -39,8 +39,10 @@ private[spark] abstract class LauncherBackend {
   def connect(): Unit = {
     val port = sys.env.get(LauncherProtocol.ENV_LAUNCHER_PORT).map(_.toInt)
     val secret = sys.env.get(LauncherProtocol.ENV_LAUNCHER_SECRET)
-    if (port != None && secret != None) {
-      val s = new Socket(InetAddress.getLoopbackAddress(), port.get)
+    if (port.isDefined && secret.isDefined) {
+      // 环回地址用途: 一般我们用于在同一机器进行tcp/ip通信。
+      // 目的: 地址为环回接口的数据据一般不会出现在网络上.
+      val s = new Socket(InetAddress.getLoopbackAddress(),port.get)
       connection = new BackendConnection(s)
       connection.send(new Hello(secret.get, SPARK_VERSION))
       clientThread = LauncherBackend.threadFactory.newThread(connection)

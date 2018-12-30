@@ -149,30 +149,39 @@ private[spark] class Client(
       // Setup the credentials before doing anything else,
       // so we have don't have issues at any point.
       setupCredentials()
+      // yarnClient 初始化
       yarnClient.init(yarnConf)
+      // yarnClient 启动
       yarnClient.start()
 
       logInfo("Requesting a new application from cluster with %d NodeManagers"
         .format(yarnClient.getYarnClusterMetrics.getNumNodeManagers))
 
       // Get a new application from our RM
+      // 从RM获取一个新的application
       val newApp = yarnClient.createApplication()
+
       val newAppResponse = newApp.getNewApplicationResponse()
       appId = newAppResponse.getApplicationId()
+      //
       reportLauncherState(SparkAppHandle.State.SUBMITTED)
       launcherBackend.setAppId(appId.toString)
 
       new CallerContext("CLIENT", Option(appId.toString)).setCurrentContext()
 
+
       // Verify whether the cluster has enough resources for our AM
+      // 验证群集是否有足够的资源用于AM
       verifyClusterResources(newAppResponse)
 
       // Set up the appropriate contexts to launch our AM
+      // 初始化containerContext,主要设置运行环境java opts 和运行AR的指令
       val containerContext = createContainerLaunchContext(newAppResponse)
       val appContext = createApplicationSubmissionContext(newApp, containerContext)
 
       // Finally, submit and monitor the application
       logInfo(s"Submitting application $appId to ResourceManager")
+
       yarnClient.submitApplication(appContext)
       appId
     } catch {
@@ -186,6 +195,7 @@ private[spark] class Client(
 
   /**
    * Cleanup application staging directory.
+    * 清理应用程序临时目录
    */
   private def cleanupStagingDir(appId: ApplicationId): Unit = {
     val stagingDirPath = new Path(appStagingBaseDir, getAppStagingDir(appId))
@@ -1164,7 +1174,9 @@ private[spark] class Client(
    * throw an appropriate SparkException.
    */
   def run(): Unit = {
+    // 提交应用
     this.appId = submitApplication()
+
     if (!launcherBackend.isConnected() && fireAndForget) {
       val report = getApplicationReport(appId)
       val state = report.getYarnApplicationState
@@ -1174,6 +1186,8 @@ private[spark] class Client(
         throw new SparkException(s"Application $appId finished with status: $state")
       }
     } else {
+      // 监控application,yarnApplicationState:yarn application状态
+      // finalApplicationStatus最终状态
       val (yarnApplicationState, finalApplicationStatus) = monitorApplication(appId)
       if (yarnApplicationState == YarnApplicationState.FAILED ||
         finalApplicationStatus == FinalApplicationStatus.FAILED) {
@@ -1217,12 +1231,14 @@ private object Client extends Logging {
     // Set an env variable indicating we are running in YARN mode.
     // Note that any env variable with the SPARK_ prefix gets propagated to all (remote) processes
     System.setProperty("SPARK_YARN_MODE", "true")
+
     val sparkConf = new SparkConf
     // SparkSubmit would use yarn cache to distribute files & jars in yarn mode,
     // so remove them from sparkConf here for yarn mode.
     sparkConf.remove("spark.jars")
     sparkConf.remove("spark.files")
     val args = new ClientArguments(argStrings)
+    // 运行
     new Client(args, sparkConf).run()
   }
 

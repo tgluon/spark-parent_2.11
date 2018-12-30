@@ -54,7 +54,7 @@ class Main {
         // 将参数封装到list
         List<String> args = new ArrayList<>(Arrays.asList(argsArray));
 
-        // 移除list第一个元素,也就是类名
+        // 移除list第一个元素,也就是类名(org.apache.spark.deploy.SparkSubmit)
         String className = args.remove(0);
 
         boolean printLaunchCommand = !isEmpty(System.getenv("SPARK_PRINT_LAUNCH_COMMAND"));
@@ -67,7 +67,7 @@ class Main {
                 printLaunchCommand = false;
                 System.err.println("Error: " + e.getMessage());
                 System.err.println();
-
+                // 参数解析
                 MainClassOptionParser parser = new MainClassOptionParser();
                 try {
                     parser.parse(args);
@@ -77,6 +77,7 @@ class Main {
 
                 List<String> help = new ArrayList<>();
                 if (parser.className != null) {
+                    // --class
                     help.add(parser.CLASS);
                     help.add(parser.className);
                 }

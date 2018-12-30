@@ -173,6 +173,7 @@ object SparkSubmit {
       if (args.proxyUser != null) {
         val proxyUser = UserGroupInformation.createProxyUser(args.proxyUser,
           UserGroupInformation.getCurrentUser())
+
         try {
           proxyUser.doAs(new PrivilegedExceptionAction[Unit]() {
             override def run(): Unit = {
@@ -514,6 +515,7 @@ object SparkSubmit {
     }
 
     // Map all arguments to command-line options or system properties for our chosen mode
+    // 将用户参数和系统属性分开并且只会获取当前部署模式需要的jar,并且最后合并到childArgs传递给后面。
     for (opt <- options) {
       if (opt.value != null &&
         (deployMode & opt.deployMode) != 0 &&
@@ -530,7 +532,8 @@ object SparkSubmit {
     // Add the application jar automatically so the user doesn't have to call sc.addJar
     // For YARN cluster mode, the jar is already distributed on each node as "app.jar"
     // For python and R files, the primary resource is already distributed as a regular file
-    // 将用户的jar和--jars指定的jars,合并到spark.jars属性,excutor在standalone模式下执行任务会通过spark.jars这个参数
+    // 将用户的jar和--jars指定的jars,合并到spark.jars属性,excutor在standalone模式下执行任务会通过spark.jars
+    // 这个参数
     if (!isYarnCluster && !args.isPython && !args.isR) {
       var jars = sysProps.get("spark.jars").map(x => x.split(",").toSeq).getOrElse(Seq.empty)
       if (isUserJar(args.primaryResource)) {
@@ -707,7 +710,7 @@ object SparkSubmit {
       }
     // 线程默认类加载器加入不设置采用的是系统类加载器，线程上下文类加载器会基础父类加载器
     Thread.currentThread.setContextClassLoader(loader)
-    //  只有在client模式下，用户的jar，--jars上传的jar全部被打包到loader的classpath里面，所以，只要不少包，
+    //  只有在client模式下，用户的jar,--jars上传的jar全部被打包到loader的classpath里面，所以，只要不少包，
     // 无论隐式因引用其他包的类还是现实引用，都会被找到
     // --jars参数指定的jars在yarncluster模式下，直接是被封装到childArgs里面了，传递给了yarn client
     for (jar <- childClasspath) {

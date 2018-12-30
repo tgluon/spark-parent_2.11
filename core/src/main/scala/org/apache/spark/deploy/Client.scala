@@ -221,7 +221,7 @@ object Client {
 
     val conf = new SparkConf()
     val driverArgs = new ClientArguments(args)
-
+    // 设置RPC超时时间为10秒
     if (!conf.contains("spark.rpc.askTimeout")) {
       conf.set("spark.rpc.askTimeout", "10s")
     }
@@ -232,6 +232,7 @@ object Client {
     // 获取master终端引用
     val masterEndpoints = driverArgs.masters.map(RpcAddress.fromSparkURL).
       map(rpcEnv.setupEndpointRef(_, Master.ENDPOINT_NAME))
+
     rpcEnv.setupEndpoint("client", new ClientEndpoint(rpcEnv, driverArgs, masterEndpoints, conf))
 
     rpcEnv.awaitTermination()
