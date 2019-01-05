@@ -27,6 +27,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 
 /**
+ * 作用:对从管道中读取的ByteBuf按照数据帧进行解析；
  * A customized frame decoder that allows intercepting raw data.
  * <p>
  * This behaves like Netty's frame decoder (with harcoded parameters that match this library's

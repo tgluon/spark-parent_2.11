@@ -20,6 +20,7 @@ package org.apache.spark.network.client;
 import java.nio.ByteBuffer;
 
 /**
+ * 作用:RpcHandler对请求的消息处理完毕后，进行回调的接口
  * Callback for the result of a single RPC. This will be invoked once with either success or
  * failure.
  */

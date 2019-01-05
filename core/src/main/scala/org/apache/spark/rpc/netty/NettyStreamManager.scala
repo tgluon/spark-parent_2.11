@@ -26,7 +26,7 @@ import org.apache.spark.util.Utils
 
 /**
  * StreamManager implementation for serving files from a NettyRpcEnv.
- *
+ * 用户文件与jar的上传
  * Three kinds of resources can be registered in this manager, all backed by actual files:
  *
  * - "/files": a flat list of files; used as the backend for [[SparkContext.addFile]].
@@ -38,9 +38,11 @@ import org.apache.spark.util.Utils
  */
 private[netty] class NettyStreamManager(rpcEnv: NettyRpcEnv)
   extends StreamManager with RpcEnvFileServer {
-
+  // 文件
   private val files = new ConcurrentHashMap[String, File]()
+  // jar
   private val jars = new ConcurrentHashMap[String, File]()
+  // 目录
   private val dirs = new ConcurrentHashMap[String, File]()
 
   override def getChunk(streamId: Long, chunkIndex: Int): ManagedBuffer = {

@@ -403,11 +403,11 @@ private[spark] class MesosClusterScheduler(
   private def getDriverCommandValue(desc: MesosDriverDescription): String = {
     val dockerDefined = desc.conf.contains("spark.mesos.executor.docker.image")
     val executorUri = getDriverExecutorURI(desc)
-    // Gets the path to run spark-submit, and the path to the Mesos sandbox.
+    // Gets the path to run spark-submit.sh, and the path to the Mesos sandbox.
     val (executable, sandboxPath) = if (dockerDefined) {
       // Application jar is automatically downloaded in the mounted sandbox by Mesos,
       // and the path to the mounted volume is stored in $MESOS_SANDBOX env variable.
-      ("./bin/spark-submit", "$MESOS_SANDBOX")
+      ("./bin/spark-submit.sh", "$MESOS_SANDBOX")
     } else if (executorUri.isDefined) {
       val folderBasename = executorUri.get.split('/').last.split('.').head
 
@@ -417,7 +417,7 @@ private[spark] class MesosClusterScheduler(
 
       val prefixEnv = if (!entries.isEmpty) Utils.libraryPathEnvPrefix(entries) else ""
 
-      val cmdExecutable = s"cd $folderBasename*; $prefixEnv bin/spark-submit"
+      val cmdExecutable = s"cd $folderBasename*; $prefixEnv bin/spark-submit.sh"
       // Sandbox path points to the parent folder as we chdir into the folderBasename.
       (cmdExecutable, "..")
     } else {
@@ -427,7 +427,7 @@ private[spark] class MesosClusterScheduler(
         .getOrElse {
           throw new SparkException("Executor Spark home `spark.mesos.executor.home` is not set!")
         }
-      val cmdExecutable = new File(executorSparkHome, "./bin/spark-submit").getPath
+      val cmdExecutable = new File(executorSparkHome, "./bin/spark-submit.sh").getPath
       // Sandbox points to the current directory by default with Mesos.
       (cmdExecutable, ".")
     }

@@ -20,6 +20,7 @@ package org.apache.spark.network.client;
 import io.netty.channel.Channel;
 
 /**
+ * 作用: 当服务端响应客户端连接时在客户端执行一次的引导程序。
  * A bootstrap which is executed on a TransportClient before it is returned to the user.
  * This enables an initial exchange of information (e.g., SASL authentication tokens) on a once-per-
  * connection basis.

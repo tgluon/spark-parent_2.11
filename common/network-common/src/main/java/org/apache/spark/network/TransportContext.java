@@ -42,6 +42,8 @@ import org.apache.spark.network.util.TransportConf;
 import org.apache.spark.network.util.TransportFrameDecoder;
 
 /**
+ * 作用:传输上下文，包含了用于创建传输服务端（TransportServer）和传输客户端工厂（TransportClientFactory）
+ * 的上下文信息，并支持使用TransportChannelHandler设置Netty提供的SocketChannel的Pipeline的实现。
  * Contains the context to create a {@link TransportServer}, {@link TransportClientFactory}, and to
  * setup Netty Channel pipelines with a
  * {@link org.apache.spark.network.server.TransportChannelHandler}.
@@ -54,11 +56,13 @@ import org.apache.spark.network.util.TransportFrameDecoder;
  * The TransportServer and TransportClientFactory both create a TransportChannelHandler for each
  * channel. As each TransportChannelHandler contains a TransportClient, this enables server
  * processes to send messages back to the client on an existing channel.
+ * TransportContext内部包含传输上下文的配置信息TransportConf和对客户端请求消息进行处理的RpcHandler
  */
 public class TransportContext {
   private static final Logger logger = LoggerFactory.getLogger(TransportContext.class);
-
+  // 传输上下文的配置信息TransportConf
   private final TransportConf conf;
+  // 对客户端请求消息进行处理的RpcHandler
   private final RpcHandler rpcHandler;
   private final boolean closeIdleConnections;
 

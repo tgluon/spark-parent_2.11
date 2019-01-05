@@ -82,50 +82,50 @@ class SparkSubmitOptionParser {
    * name of the option, passed to {@link #handle(String, String)}.
    * <p>
    * Options not listed here nor in the "switch" list below will result in a call to
-   * {@link $#handleUnknown(String)}.
+   * {@link #handleUnknown(String)}.
    * <p>
    * These two arrays are visible for tests.
    */
   final String[][] opts = {
-    { ARCHIVES },
-    { CLASS },
-    { CONF, "-c" },
-    { DEPLOY_MODE },
-    { DRIVER_CLASS_PATH },
-    { DRIVER_CORES },
-    { DRIVER_JAVA_OPTIONS },
-    { DRIVER_LIBRARY_PATH },
-    { DRIVER_MEMORY },
-    { EXECUTOR_CORES },
-    { EXECUTOR_MEMORY },
-    { FILES },
-    { JARS },
-    { KEYTAB },
-    { KILL_SUBMISSION },
-    { MASTER },
-    { NAME },
-    { NUM_EXECUTORS },
-    { PACKAGES },
-    { PACKAGES_EXCLUDE },
-    { PRINCIPAL },
-    { PROPERTIES_FILE },
-    { PROXY_USER },
-    { PY_FILES },
-    { QUEUE },
-    { REPOSITORIES },
-    { STATUS },
-    { TOTAL_EXECUTOR_CORES },
+          { ARCHIVES },
+          { CLASS },
+          { CONF, "-c" },
+          { DEPLOY_MODE },
+          { DRIVER_CLASS_PATH },
+          { DRIVER_CORES },
+          { DRIVER_JAVA_OPTIONS },
+          { DRIVER_LIBRARY_PATH },
+          { DRIVER_MEMORY },
+          { EXECUTOR_CORES },
+          { EXECUTOR_MEMORY },
+          { FILES },
+          { JARS },
+          { KEYTAB },
+          { KILL_SUBMISSION },
+          { MASTER },
+          { NAME },
+          { NUM_EXECUTORS },
+          { PACKAGES },
+          { PACKAGES_EXCLUDE },
+          { PRINCIPAL },
+          { PROPERTIES_FILE },
+          { PROXY_USER },
+          { PY_FILES },
+          { QUEUE },
+          { REPOSITORIES },
+          { STATUS },
+          { TOTAL_EXECUTOR_CORES },
   };
 
   /**
    * List of switches (command line options that do not take parameters) recognized by spark-submit.
    */
   final String[][] switches = {
-    { HELP, "-h" },
-    { SUPERVISE },
-    { USAGE_ERROR },
-    { VERBOSE, "-v" },
-    { VERSION },
+          { HELP, "-h" },
+          { SUPERVISE },
+          { USAGE_ERROR },
+          { VERBOSE, "-v" },
+          { VERSION },
   };
 
   /**
@@ -155,7 +155,7 @@ class SparkSubmitOptionParser {
         if (value == null) {
           if (idx == args.size() - 1) {
             throw new IllegalArgumentException(
-                String.format("Missing argument for option '%s'.", arg));
+                    String.format("Missing argument for option '%s'.", arg));
           }
           idx++;
           value = args.get(idx);

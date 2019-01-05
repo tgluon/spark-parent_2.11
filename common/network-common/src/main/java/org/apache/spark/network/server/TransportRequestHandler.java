@@ -46,6 +46,7 @@ import org.apache.spark.network.protocol.StreamResponse;
 import static org.apache.spark.network.util.NettyUtils.getRemoteAddress;
 
 /**
+ * 作用: 用于处理客户端的请求并在写完块数据后返回的处理程序。
  * A handler that processes requests from clients and writes chunk data back. Each handler is
  * attached to a single Netty channel, and keeps track of which streams have been fetched via this
  * channel, in order to clean them up if the channel is terminated (see #channelUnregistered).

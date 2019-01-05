@@ -31,6 +31,7 @@ import org.apache.spark.network.protocol.ResponseMessage;
 import static org.apache.spark.network.util.NettyUtils.getRemoteAddress;
 
 /**
+ * 作用: 代理由TransportRequestHandler处理的请求和由TransportResponseHandler处理的响应，并加入传输层的处理。
  * The single Transport-level Channel handler which is used for delegating requests to the
  * {@link TransportRequestHandler} and responses to the {@link TransportResponseHandler}.
  *

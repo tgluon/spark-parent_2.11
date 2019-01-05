@@ -48,6 +48,7 @@ import org.apache.spark.network.util.NettyUtils;
 import org.apache.spark.network.util.TransportConf;
 
 /**
+ * 作用:创建传输客户端（TransportClient）的传输客户端工厂类。
  * Factory for creating {@link TransportClient}s by using createClient.
  *
  * The factory maintains a connection pool to other hosts and should return the same
@@ -59,7 +60,15 @@ import org.apache.spark.network.util.TransportConf;
  */
 public class TransportClientFactory implements Closeable {
 
-  /** A simple data structure to track the pool of clients between two peer nodes. */
+  /**
+   * 作用: 在两个对等节点间维护的关于传输客户端（TransportClient）的池子。
+   * ClientPool是TransportClientFactory的内部组件。
+   *
+   * A simple data structure to track the pool of clients between two peer nodes.
+   * ClientPool实际是由TransportClient的数组构成，而locks数组中的Object与clients数组中的
+   * TransportClient按照数组索引一一对应，通过对每个TransportClient分别采用不同的锁，降低并
+   * 发情况下线程间对锁的争用，进而减少阻塞，提高并发度。
+   * */
   private static class ClientPool {
     TransportClient[] clients;
     Object[] locks;
@@ -78,6 +87,7 @@ public class TransportClientFactory implements Closeable {
   private final TransportContext context;
   private final TransportConf conf;
   private final List<TransportClientBootstrap> clientBootstraps;
+  /** 针对每个Socket地址的连接池ClientPool*/
   private final ConcurrentHashMap<SocketAddress, ClientPool> connectionPool;
 
   /** Random number generator for picking connections between peers. */

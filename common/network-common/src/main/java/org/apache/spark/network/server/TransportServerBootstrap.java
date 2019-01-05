@@ -20,6 +20,7 @@ package org.apache.spark.network.server;
 import io.netty.channel.Channel;
 
 /**
+ * 作用: 当客户端连接到服务端时在服务端执行一次的引导程序。
  * A bootstrap which is executed on a TransportServer's client channel once a client connects
  * to the server. This allows customizing the client channel to allow for things such as SASL
  * authentication.

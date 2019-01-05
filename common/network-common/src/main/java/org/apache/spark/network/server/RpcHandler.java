@@ -26,10 +26,13 @@ import org.apache.spark.network.client.RpcResponseCallback;
 import org.apache.spark.network.client.TransportClient;
 
 /**
+ * 作用: 对调用传输客户端（TransportClient）的sendRPC方法发送的消息进行处理的程序。
+ * 处理sendRPC()的消息,来自TransportClient
  * Handler for sendRPC() messages sent by {@link org.apache.spark.network.client.TransportClient}s.
+ * RpcHandler只用于创建TransportServer
  */
 public abstract class RpcHandler {
-
+   // 单一回调
   private static final RpcResponseCallback ONE_WAY_CALLBACK = new OneWayRpcCallback();
 
   /**

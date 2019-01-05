@@ -110,7 +110,7 @@ class MesosFineGrainedSchedulerBackendSuite
     assert(cpus === mesosExecutorCores)
   }
 
-  test("check spark-class location correctly") {
+  test("check spark-class.sh location correctly") {
     val conf = new SparkConf
     conf.set("spark.mesos.executor.home", "/mesos-home")
 
@@ -136,13 +136,13 @@ class MesosFineGrainedSchedulerBackendSuite
     // uri is null.
     val (executorInfo, _) = mesosSchedulerBackend.createExecutorInfo(resources, "test-id")
     assert(executorInfo.getCommand.getValue ===
-      s" /mesos-home/bin/spark-class ${classOf[MesosExecutorBackend].getName}")
+      s" /mesos-home/bin/spark-class.sh ${classOf[MesosExecutorBackend].getName}")
 
     // uri exists.
     conf.set("spark.executor.uri", "hdfs:///test-app-1.0.0.tgz")
     val (executorInfo1, _) = mesosSchedulerBackend.createExecutorInfo(resources, "test-id")
     assert(executorInfo1.getCommand.getValue ===
-      s"cd test-app-1*;  ./bin/spark-class ${classOf[MesosExecutorBackend].getName}")
+      s"cd test-app-1*;  ./bin/spark-class.sh ${classOf[MesosExecutorBackend].getName}")
   }
 
   test("spark docker properties correctly populate the DockerInfo message") {

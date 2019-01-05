@@ -20,7 +20,13 @@ package org.apache.spark.network.util;
 import com.google.common.primitives.Ints;
 
 /**
+ * 作用:传输上下文的配置信息
+ *
  * A central location that tracks all the settings we expose to users.
+ * 给Spark的RPC框架提供配置信息，它有两个成员属性——配置提供者conf和配置的模块名称module
+ * 通常使用SparkTransportConf创建TransportConf
+ *
+ * TransportConf在创建TransportClientFactory和TransportServer时都是必须的
  */
 public class TransportConf {
 
@@ -42,9 +48,9 @@ public class TransportConf {
   private final String SPARK_NETWORK_IO_MAXRETRIES_KEY;
   private final String SPARK_NETWORK_IO_RETRYWAIT_KEY;
   private final String SPARK_NETWORK_IO_LAZYFD_KEY;
-
+  // 配置提供者conf
   private final ConfigProvider conf;
-
+  // 配置的模块名称module
   private final String module;
 
   public TransportConf(String module, ConfigProvider conf) {

@@ -42,6 +42,7 @@ import static org.apache.spark.network.util.NettyUtils.getRemoteAddress;
 import org.apache.spark.network.util.TransportFrameDecoder;
 
 /**
+ * 作用: 用于处理服务端的响应，并且对发出请求的客户端进行响应的处理程序。
  * Handler that processes server responses, in response to requests issued from a
  * [[TransportClient]]. It works by tracking the list of outstanding requests (and their callbacks).
  *

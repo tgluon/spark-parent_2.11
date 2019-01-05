@@ -210,7 +210,7 @@ private[spark] class MesosCoarseGrainedSchedulerBackend(
         .getOrElse {
           throw new SparkException("Executor Spark home `spark.mesos.executor.home` is not set!")
         }
-      val runScript = new File(executorSparkHome, "./bin/spark-class").getPath
+      val runScript = new File(executorSparkHome, "./bin/spark-class.sh").getPath
       command.setValue(
         "%s \"%s\" org.apache.spark.executor.CoarseGrainedExecutorBackend"
           .format(prefixEnv, runScript) +
@@ -225,7 +225,7 @@ private[spark] class MesosCoarseGrainedSchedulerBackend(
       val basename = uri.get.split('/').last.split('.').head
       command.setValue(
         s"cd $basename*; $prefixEnv " +
-        "./bin/spark-class org.apache.spark.executor.CoarseGrainedExecutorBackend" +
+        "./bin/spark-class.sh org.apache.spark.executor.CoarseGrainedExecutorBackend" +
         s" --driver-url $driverURL" +
         s" --executor-id $taskId" +
         s" --hostname ${offer.getHostname}" +

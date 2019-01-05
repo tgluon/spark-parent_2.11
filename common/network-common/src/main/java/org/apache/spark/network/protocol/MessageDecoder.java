@@ -27,8 +27,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
+ * 作用:对从管道中读取的ByteBuf进行解析，防止丢包和解析错误
  * Decoder used by the client side to encode server-to-client responses.
  * This encoder is stateless so it is safe to be shared by multiple threads.
+ *
+ * 为什么需要MessageEncoder和MessageDecoder？
+ * 因为在基于流的传输里（比如TCP/IP），接收到的数据首先会被存储到一个socket接收缓冲里。
+ * 不幸的是，基于流的传输并不是一个数据包队列，而是一个字节队列。即使你发送了2个独立的数据包，
+ * 操作系统也不会作为2个消息处理而仅仅认为是一连串的字节。因此不能保证远程写入的数据会被准确地读取。
+ * 举个例子，让我们假设操作系统的TCP/TP协议栈已经接收了3个数据包：ABC、DEF、GHI。
+ * 由于基于流传输的协议的这种统一的性质，在你的应用程序在读取数据的时候有很高的可能性被分成下面的
+ * 片段：AB、CDEFG、H、I。因此，接收方不管是客户端还是服务端，都应该把接收到的数据整理成一个或者多
+ * 个更有意义并且让程序的逻辑更好理解的数据。
  */
 @ChannelHandler.Sharable
 public final class MessageDecoder extends MessageToMessageDecoder<ByteBuf> {

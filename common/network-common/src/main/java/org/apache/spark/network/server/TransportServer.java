@@ -41,6 +41,7 @@ import org.apache.spark.network.util.NettyUtils;
 import org.apache.spark.network.util.TransportConf;
 
 /**
+ * 作用:RPC框架的服务端，提供高效的、低级别的流服务。
  * Server for the efficient, low-level streaming service.
  */
 public class TransportServer implements Closeable {
@@ -58,6 +59,7 @@ public class TransportServer implements Closeable {
   /**
    * Creates a TransportServer that binds to the given host and the given port, or to any available
    * if 0. If you don't want to bind to any special host, set "hostToBind" to null.
+   *
    * */
   public TransportServer(
       TransportContext context,
@@ -73,6 +75,7 @@ public class TransportServer implements Closeable {
     try {
       init(hostToBind, portToBind);
     } catch (RuntimeException e) {
+      // 关闭退出
       JavaUtils.closeQuietly(this);
       throw e;
     }

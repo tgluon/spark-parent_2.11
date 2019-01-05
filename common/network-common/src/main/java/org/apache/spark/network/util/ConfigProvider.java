@@ -21,9 +21,12 @@ import java.util.NoSuchElementException;
 
 /**
  * Provides a mechanism for constructing a {@link TransportConf} using some sort of configuration.
+ * ConfigProvider中包括get、getInt、getLong、getDouble、getBoolean等方法，
+ * 这些方法都是基于抽象方法get获取值，经过一次类型转换而实现。
  */
 public abstract class ConfigProvider {
   /** Obtains the value of the given config, throws NoSuchElementException if it doesn't exist. */
+  // 这个抽象的get方法将需要子类去实现。
   public abstract String get(String name);
 
   public String get(String name, String defaultValue) {

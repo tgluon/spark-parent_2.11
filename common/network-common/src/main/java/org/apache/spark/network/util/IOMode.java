@@ -23,5 +23,8 @@ package org.apache.spark.network.util;
  * AUTO is used to select EPOLL if it's available, or NIO otherwise.
  */
 public enum IOMode {
+  /**
+   * EPOLL:https://www.imooc.com/article/75127?block_id=tuijian_wz
+   */
   NIO, EPOLL
 }

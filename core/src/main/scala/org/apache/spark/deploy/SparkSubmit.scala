@@ -133,7 +133,9 @@ object SparkSubmit {
     appArgs.action match {
       // 执行这一句，转到submit方法
       case SparkSubmitAction.SUBMIT => submit(appArgs)
+      // kill掉
       case SparkSubmitAction.KILL => kill(appArgs)
+      // 请求状态
       case SparkSubmitAction.REQUEST_STATUS => requestStatus(appArgs)
     }
   }
@@ -166,7 +168,7 @@ object SparkSubmit {
     */
   @tailrec
   private def submit(args: SparkSubmitArguments): Unit = {
-    // 
+    // 准备提交环境
     val (childArgs, childClasspath, sysProps, childMainClass) = prepareSubmitEnvironment(args)
 
     def doRunMain(): Unit = {

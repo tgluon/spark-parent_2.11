@@ -130,13 +130,13 @@ private[spark] class MesosFineGrainedSchedulerBackend(
 
     val executorBackendName = classOf[MesosExecutorBackend].getName
     if (uri.isEmpty) {
-      val executorPath = new File(executorSparkHome, "/bin/spark-class").getPath
+      val executorPath = new File(executorSparkHome, "/bin/spark-class.sh").getPath
       command.setValue(s"$prefixEnv $executorPath $executorBackendName")
     } else {
       // Grab everything to the first '.'. We'll use that and '*' to
       // glob the directory "correctly".
       val basename = uri.get.split('/').last.split('.').head
-      command.setValue(s"cd ${basename}*; $prefixEnv ./bin/spark-class $executorBackendName")
+      command.setValue(s"cd ${basename}*; $prefixEnv ./bin/spark-class.sh $executorBackendName")
       command.addUris(CommandInfo.URI.newBuilder().setValue(uri.get))
     }
     val builder = MesosExecutorInfo.newBuilder()

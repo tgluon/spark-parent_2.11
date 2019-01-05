@@ -36,7 +36,7 @@ import org.apache.spark.util.{ShutdownHookManager, Utils}
  * for resources.
  *
  * A typical new driver lifecycle is the following:
- * - Driver submitted via spark-submit talking to the [[MesosRestServer]]
+ * - Driver submitted via spark-submit.sh talking to the [[MesosRestServer]]
  * - [[MesosRestServer]] queues the driver request to [[MesosClusterScheduler]]
  * - [[MesosClusterScheduler]] gets resource offers and launches the drivers that are in queue
  *
