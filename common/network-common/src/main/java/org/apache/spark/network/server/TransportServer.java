@@ -45,110 +45,122 @@ import org.apache.spark.network.util.TransportConf;
  * Server for the efficient, low-level streaming service.
  */
 public class TransportServer implements Closeable {
-  private static final Logger logger = LoggerFactory.getLogger(TransportServer.class);
+    private static final Logger logger = LoggerFactory.getLogger(TransportServer.class);
 
-  private final TransportContext context;
-  private final TransportConf conf;
-  private final RpcHandler appRpcHandler;
-  private final List<TransportServerBootstrap> bootstraps;
+    private final TransportContext context;
+    private final TransportConf conf;
+    private final RpcHandler appRpcHandler;
+    private final List<TransportServerBootstrap> bootstraps;
 
-  private ServerBootstrap bootstrap;
-  private ChannelFuture channelFuture;
-  private int port = -1;
+    private ServerBootstrap bootstrap;
+    private ChannelFuture channelFuture;
+    private int port = -1;
 
-  /**
-   * Creates a TransportServer that binds to the given host and the given port, or to any available
-   * if 0. If you don't want to bind to any special host, set "hostToBind" to null.
-   *
-   * */
-  public TransportServer(
-      TransportContext context,
-      String hostToBind,
-      int portToBind,
-      RpcHandler appRpcHandler,
-      List<TransportServerBootstrap> bootstraps) {
-    this.context = context;
-    this.conf = context.getConf();
-    this.appRpcHandler = appRpcHandler;
-    this.bootstraps = Lists.newArrayList(Preconditions.checkNotNull(bootstraps));
+    /**
+     * Creates a TransportServer that binds to the given host and the given port, or to any available
+     * if 0. If you don't want to bind to any special host, set "hostToBind" to null.
+     */
+    public TransportServer(
+            TransportContext context,
+            String hostToBind,
+            int portToBind,
+            RpcHandler appRpcHandler,
+            List<TransportServerBootstrap> bootstraps) {
+        this.context = context;
+        this.conf = context.getConf();
+        this.appRpcHandler = appRpcHandler;
+        this.bootstraps = Lists.newArrayList(Preconditions.checkNotNull(bootstraps));
 
-    try {
-      init(hostToBind, portToBind);
-    } catch (RuntimeException e) {
-      // 关闭退出
-      JavaUtils.closeQuietly(this);
-      throw e;
-    }
-  }
-
-  public int getPort() {
-    if (port == -1) {
-      throw new IllegalStateException("Server not initialized");
-    }
-    return port;
-  }
-
-  private void init(String hostToBind, int portToBind) {
-
-    IOMode ioMode = IOMode.valueOf(conf.ioMode());
-    EventLoopGroup bossGroup =
-      NettyUtils.createEventLoop(ioMode, conf.serverThreads(), conf.getModuleName() + "-server");
-    EventLoopGroup workerGroup = bossGroup;
-
-    PooledByteBufAllocator allocator = NettyUtils.createPooledByteBufAllocator(
-      conf.preferDirectBufs(), true /* allowCache */, conf.serverThreads());
-
-    bootstrap = new ServerBootstrap()
-      .group(bossGroup, workerGroup)
-      .channel(NettyUtils.getServerChannelClass(ioMode))
-      .option(ChannelOption.ALLOCATOR, allocator)
-      .childOption(ChannelOption.ALLOCATOR, allocator);
-
-    if (conf.backLog() > 0) {
-      bootstrap.option(ChannelOption.SO_BACKLOG, conf.backLog());
-    }
-
-    if (conf.receiveBuf() > 0) {
-      bootstrap.childOption(ChannelOption.SO_RCVBUF, conf.receiveBuf());
-    }
-
-    if (conf.sendBuf() > 0) {
-      bootstrap.childOption(ChannelOption.SO_SNDBUF, conf.sendBuf());
-    }
-
-    bootstrap.childHandler(new ChannelInitializer<SocketChannel>() {
-      @Override
-      protected void initChannel(SocketChannel ch) throws Exception {
-        RpcHandler rpcHandler = appRpcHandler;
-        for (TransportServerBootstrap bootstrap : bootstraps) {
-          rpcHandler = bootstrap.doBootstrap(ch, rpcHandler);
+        try {
+            init(hostToBind, portToBind);
+        } catch (RuntimeException e) {
+            // 关闭退出
+            JavaUtils.closeQuietly(this);
+            throw e;
         }
-        context.initializePipeline(ch, rpcHandler);
-      }
-    });
-
-    InetSocketAddress address = hostToBind == null ?
-        new InetSocketAddress(portToBind): new InetSocketAddress(hostToBind, portToBind);
-    channelFuture = bootstrap.bind(address);
-    channelFuture.syncUninterruptibly();
-
-    port = ((InetSocketAddress) channelFuture.channel().localAddress()).getPort();
-    logger.debug("Shuffle server started on port: {}", port);
-  }
-
-  @Override
-  public void close() {
-    if (channelFuture != null) {
-      // close is a local operation and should finish within milliseconds; timeout just to be safe
-      channelFuture.channel().close().awaitUninterruptibly(10, TimeUnit.SECONDS);
-      channelFuture = null;
     }
-    if (bootstrap != null && bootstrap.group() != null) {
-      bootstrap.group().shutdownGracefully();
+
+    public int getPort() {
+        if (port == -1) {
+            throw new IllegalStateException("Server not initialized");
+        }
+        return port;
     }
-    if (bootstrap != null && bootstrap.childGroup() != null) {
-      bootstrap.childGroup().shutdownGracefully();
+
+    private void init(String hostToBind, int portToBind) {
+        IOMode ioMode = IOMode.valueOf(conf.ioMode());
+        /**
+         * boss 线程组：用于服务端接受客户端的连接。
+         * worker 线程组：用于进行客户端的 SocketChannel 的数据读写。
+         *
+         * bossGroup 是用于服务端 的 accept 的, 即用于处理客户端的连接请求. 我们可以把 Netty 比作一个饭店,
+         * bossGroup 就像一个像一个前台接待, 当客户来到饭店吃时, 接待员就会引导顾客就坐, 为顾客端茶送水等. 而
+         * workerGroup, 其实就是实际上干活的啦, 它们负责客户端连接通道的 IO 操作: 当接待员 招待好顾客后, 就可
+         * 以稍做休息, 而此时后厨里的厨师们(workerGroup)就开始忙碌地准备饭菜了.
+         *
+         * 其它参考:https://www.jianshu.com/p/128ddc36e713
+         */
+        EventLoopGroup bossGroup =
+                NettyUtils.createEventLoop(ioMode, conf.serverThreads(), conf.getModuleName() + "-server");
+        EventLoopGroup workerGroup = bossGroup;
+
+        // 基于内存池的 ByteBuf 的分配器
+        PooledByteBufAllocator allocator = NettyUtils.createPooledByteBufAllocator(
+                conf.preferDirectBufs(), true /* allowCache */, conf.serverThreads());
+        // 创建ServerBootstrap
+        bootstrap = new ServerBootstrap()
+                .group(bossGroup, workerGroup)
+                .channel(NettyUtils.getServerChannelClass(ioMode))
+                // 设置 NioServerSocketChannel的可选项
+                .option(ChannelOption.ALLOCATOR, allocator)
+                .childOption(ChannelOption.ALLOCATOR, allocator);
+
+        if (conf.backLog() > 0) {
+            bootstrap.option(ChannelOption.SO_BACKLOG, conf.backLog());
+        }
+
+        if (conf.receiveBuf() > 0) {
+            bootstrap.childOption(ChannelOption.SO_RCVBUF, conf.receiveBuf());
+        }
+
+        if (conf.sendBuf() > 0) {
+            bootstrap.childOption(ChannelOption.SO_SNDBUF, conf.sendBuf());
+        }
+        // 设置子处理器
+        bootstrap.childHandler(new ChannelInitializer<SocketChannel>() {
+            @Override
+            protected void initChannel(SocketChannel ch) throws Exception {
+                RpcHandler rpcHandler = appRpcHandler;
+                for (TransportServerBootstrap bootstrap : bootstraps) {
+                    rpcHandler = bootstrap.doBootstrap(ch, rpcHandler);
+                }
+                context.initializePipeline(ch, rpcHandler);
+            }
+        });
+
+        InetSocketAddress address = hostToBind == null ?
+                new InetSocketAddress(portToBind) : new InetSocketAddress(hostToBind, portToBind);
+        channelFuture = bootstrap.bind(address);
+        // 同步不可中断
+        channelFuture.syncUninterruptibly();
+
+        port = ((InetSocketAddress) channelFuture.channel().localAddress()).getPort();
+        logger.debug("Shuffle server started on port: {}", port);
     }
-    bootstrap = null;
-  }
+
+    @Override
+    public void close() {
+        if (channelFuture != null) {
+            // close is a local operation and should finish within milliseconds; timeout just to be safe
+            channelFuture.channel().close().awaitUninterruptibly(10, TimeUnit.SECONDS);
+            channelFuture = null;
+        }
+        if (bootstrap != null && bootstrap.group() != null) {
+            bootstrap.group().shutdownGracefully();
+        }
+        if (bootstrap != null && bootstrap.childGroup() != null) {
+            bootstrap.childGroup().shutdownGracefully();
+        }
+        bootstrap = null;
+    }
 }
