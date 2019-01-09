@@ -21,6 +21,16 @@ import com.codahale.metrics.{Gauge, MetricRegistry}
 
 import org.apache.spark.metrics.source.Source
 
+/**
+  * ApplicationSource用于采集Spark应用程序相关的度量。
+  * 代码清单2中ApplicationSource重载了metricRegistry和
+  * sourceName，并且向自身的注册表注册了status
+  * （即应用状态，包括：WAITING, RUNNING, FINISHED, FAILED,
+  * KILLED, UNKNOWN）、runtime_ms（运行持续时长）、cores（授权的内核数）
+  * 等度量。这三个度量的取值分别来自于ApplicationInfo的state、
+  * duration和coresGranted三个属性。
+  */
+
 private[master] class ApplicationSource(val application: ApplicationInfo) extends Source {
   override val metricRegistry = new MetricRegistry()
   override val sourceName = "%s.%s.%s".format("application", application.desc.name,

@@ -27,6 +27,11 @@ import com.codahale.metrics.graphite.{Graphite, GraphiteReporter, GraphiteUDP}
 import org.apache.spark.SecurityManager
 import org.apache.spark.metrics.MetricsSystem
 
+/**
+  * 借助Metrics提供的GraphiteReporter的API，
+  * 将度量输出到Graphite（一个由Python实现的Web应用，
+  * 采用django框架，用来收集服务器状态的监控系统）。
+  */
 private[spark] class GraphiteSink(val property: Properties, val registry: MetricRegistry,
     securityMgr: SecurityManager) extends Sink {
   val GRAPHITE_DEFAULT_PERIOD = 10

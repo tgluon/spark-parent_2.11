@@ -58,6 +58,7 @@ import org.apache.spark.network.util.TransportFrameDecoder;
  * processes to send messages back to the client on an existing channel.
  * TransportContext内部包含传输上下文的配置信息TransportConf和对客户端请求消息进行处理的RpcHandler
  */
+
 public class TransportContext {
   private static final Logger logger = LoggerFactory.getLogger(TransportContext.class);
   // 传输上下文的配置信息TransportConf

@@ -126,6 +126,7 @@ public class TransportServer implements Closeable {
         if (conf.sendBuf() > 0) {
             bootstrap.childOption(ChannelOption.SO_SNDBUF, conf.sendBuf());
         }
+
         // 设置子处理器
         bootstrap.childHandler(new ChannelInitializer<SocketChannel>() {
             @Override
@@ -152,12 +153,16 @@ public class TransportServer implements Closeable {
     public void close() {
         if (channelFuture != null) {
             // close is a local operation and should finish within milliseconds; timeout just to be safe
+            // 关闭通道等待10秒终止
             channelFuture.channel().close().awaitUninterruptibly(10, TimeUnit.SECONDS);
+            // 将通道这只为null
             channelFuture = null;
         }
+        // 关闭主线程组
         if (bootstrap != null && bootstrap.group() != null) {
             bootstrap.group().shutdownGracefully();
         }
+        // 关闭子线程组
         if (bootstrap != null && bootstrap.childGroup() != null) {
             bootstrap.childGroup().shutdownGracefully();
         }

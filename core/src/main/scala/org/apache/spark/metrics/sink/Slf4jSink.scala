@@ -24,7 +24,9 @@ import com.codahale.metrics.{MetricRegistry, Slf4jReporter}
 
 import org.apache.spark.SecurityManager
 import org.apache.spark.metrics.MetricsSystem
-
+/**
+  * 借助Metrics提供的Slf4jReporter的API，将度量输出到实现了Slf4j规范的日志输出。
+  */
 private[spark] class Slf4jSink(
     val property: Properties,
     val registry: MetricRegistry,
