@@ -70,6 +70,11 @@ case class ShuffleIndexBlockId(shuffleId: Int, mapId: Int, reduceId: Int) extend
   override def name: String = "shuffle_" + shuffleId + "_" + mapId + "_" + reduceId + ".index"
 }
 
+/**
+  *
+  * @param broadcastId 是由BroadcastManager的原子变量nextBroadcastId自增产生的
+  * @param field 字段
+  */
 @DeveloperApi
 case class BroadcastBlockId(broadcastId: Long, field: String = "") extends BlockId {
   override def name: String = "broadcast_" + broadcastId + (if (field == "") "" else "_" + field)

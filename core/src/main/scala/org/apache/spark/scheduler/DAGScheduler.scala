@@ -1778,8 +1778,8 @@ private[scheduler] class DAGSchedulerEventProcessLoop(dagScheduler: DAGScheduler
   }
 
   private def doOnReceive(event: DAGSchedulerEvent): Unit = event match {
-    //当事件为JobSubmitted时，
-    //会调用DAGScheduler.handleJobSubmitted
+    // 当事件为JobSubmitted时，
+    // 会调用DAGScheduler.handleJobSubmitted
     case JobSubmitted(jobId, rdd, func, partitions, callSite, listener, properties) =>
       dagScheduler.handleJobSubmitted(jobId, rdd, func, partitions, callSite, listener, properties)
 

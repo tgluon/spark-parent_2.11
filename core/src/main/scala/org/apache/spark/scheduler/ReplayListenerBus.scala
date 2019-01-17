@@ -30,43 +30,44 @@ import org.apache.spark.scheduler.ReplayListenerBus._
 import org.apache.spark.util.JsonProtocol
 
 /**
- * A SparkListenerBus that can be used to replay events from serialized event data.
- */
+  * A SparkListenerBus that can be used to replay events from serialized event data.
+  * 用于从序列化的事件数据中重播事件。
+  */
 private[spark] class ReplayListenerBus extends SparkListenerBus with Logging {
 
   /**
-   * Replay each event in the order maintained in the given stream. The stream is expected to
-   * contain one JSON-encoded SparkListenerEvent per line.
-   *
-   * This method can be called multiple times, but the listener behavior is undefined after any
-   * error is thrown by this method.
-   *
-   * @param logData Stream containing event log data.
-   * @param sourceName Filename (or other source identifier) from whence @logData is being read
-   * @param maybeTruncated Indicate whether log file might be truncated (some abnormal situations
-   *        encountered, log file might not finished writing) or not
-   * @param eventsFilter Filter function to select JSON event strings in the log data stream that
-   *        should be parsed and replayed. When not specified, all event strings in the log data
-   *        are parsed and replayed.
-   */
+    * Replay each event in the order maintained in the given stream. The stream is expected to
+    * contain one JSON-encoded SparkListenerEvent per line.
+    *
+    * This method can be called multiple times, but the listener behavior is undefined after any
+    * error is thrown by this method.
+    *
+    * @param logData        Stream containing event log data.
+    * @param sourceName     Filename (or other source identifier) from whence @logData is being read
+    * @param maybeTruncated Indicate whether log file might be truncated (some abnormal situations
+    *                       encountered, log file might not finished writing) or not
+    * @param eventsFilter   Filter function to select JSON event strings in the log data stream that
+    *                       should be parsed and replayed. When not specified, all event strings in the log data
+    *                       are parsed and replayed.
+    */
   def replay(
-      logData: InputStream,
-      sourceName: String,
-      maybeTruncated: Boolean = false,
-      eventsFilter: ReplayEventsFilter = SELECT_ALL_FILTER): Unit = {
+              logData: InputStream,
+              sourceName: String,
+              maybeTruncated: Boolean = false,
+              eventsFilter: ReplayEventsFilter = SELECT_ALL_FILTER): Unit = {
     val lines = Source.fromInputStream(logData).getLines()
     replay(lines, sourceName, maybeTruncated, eventsFilter)
   }
 
   /**
-   * Overloaded variant of [[replay()]] which accepts an iterator of lines instead of an
-   * [[InputStream]]. Exposed for use by custom ApplicationHistoryProvider implementations.
-   */
+    * Overloaded variant of [[replay()]] which accepts an iterator of lines instead of an
+    * [[InputStream]]. Exposed for use by custom ApplicationHistoryProvider implementations.
+    */
   def replay(
-      lines: Iterator[String],
-      sourceName: String,
-      maybeTruncated: Boolean,
-      eventsFilter: ReplayEventsFilter): Unit = {
+              lines: Iterator[String],
+              sourceName: String,
+              maybeTruncated: Boolean,
+              eventsFilter: ReplayEventsFilter): Unit = {
     var currentLine: String = null
     var lineNumber: Int = 0
 
@@ -126,9 +127,9 @@ private[spark] object ReplayListenerBus {
   val SELECT_ALL_FILTER: ReplayEventsFilter = { (eventString: String) => true }
 
   /**
-   * Classes that were removed. Structured Streaming doesn't use them any more. However, parsing
-   * old json may fail and we can just ignore these failures.
-   */
+    * Classes that were removed. Structured Streaming doesn't use them any more. However, parsing
+    * old json may fail and we can just ignore these failures.
+    */
   val KNOWN_REMOVED_CLASSES = Set(
     "org.apache.spark.sql.streaming.StreamingQueryListener$QueryProgress",
     "org.apache.spark.sql.streaming.StreamingQueryListener$QueryTerminated"

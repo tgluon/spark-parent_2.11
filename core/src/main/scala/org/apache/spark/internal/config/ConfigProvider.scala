@@ -20,8 +20,8 @@ package org.apache.spark.internal.config
 import java.util.{Map => JMap}
 
 /**
- * A source of configuration values.
- */
+  * A source of configuration values.
+  */
 private[spark] trait ConfigProvider {
 
   def get(key: String): Option[String]
@@ -29,27 +29,27 @@ private[spark] trait ConfigProvider {
 }
 
 private[spark] class EnvProvider extends ConfigProvider {
-
+  // 从系统环境获取配置信息
   override def get(key: String): Option[String] = sys.env.get(key)
 
 }
 
 private[spark] class SystemProvider extends ConfigProvider {
-
+  // 从系统设置的propertis中获取配置信息
   override def get(key: String): Option[String] = sys.props.get(key)
 
 }
 
 private[spark] class MapProvider(conf: JMap[String, String]) extends ConfigProvider {
-
+    // 从map中获取配置信息
   override def get(key: String): Option[String] = Option(conf.get(key))
 
 }
 
 /**
- * A config provider that only reads Spark config keys, and considers default values for known
- * configs when fetching configuration values.
- */
+  * A config provider that only reads Spark config keys, and considers default values for known
+  * configs when fetching configuration values.
+  */
 private[spark] class SparkConfigProvider(conf: JMap[String, String]) extends ConfigProvider {
 
   import ConfigEntry._

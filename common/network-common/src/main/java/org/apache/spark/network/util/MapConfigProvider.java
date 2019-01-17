@@ -27,6 +27,7 @@ public class MapConfigProvider extends ConfigProvider {
   private final Map<String, String> config;
 
   public MapConfigProvider(Map<String, String> config) {
+    // 使用Guava的Maps创建HashMap
     this.config = Maps.newHashMap(config);
   }
 

@@ -235,6 +235,7 @@ object SparkEnv extends Logging {
 
     val securityManager = new SecurityManager(conf, ioEncryptionKey)
     ioEncryptionKey.foreach { _ =>
+      // 检查是否应启用网络加密。
       if (!securityManager.isSaslEncryptionEnabled()) {
         logWarning("I/O encryption enabled without RPC encryption: keys will be visible on the " +
           "wire.")

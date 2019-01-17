@@ -112,7 +112,7 @@
 # org.apache.spark.metrics.sink.GraphiteSink
 #   Name:     Default:      Description:
 #   host      NONE          Hostname of the Graphite server, must be set
-#   port      NONE          Port of the Graphite server, must be set
+#   port      NONE          Port of the periodGraphite server, must be set
 #   period    10            Poll period
 #   unit      seconds       Unit of the poll period
 #   prefix    EMPTY STRING  Prefix to prepend to every metric's name

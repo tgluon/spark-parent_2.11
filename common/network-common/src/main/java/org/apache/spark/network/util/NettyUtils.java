@@ -37,7 +37,9 @@ import io.netty.util.internal.PlatformDependent;
  * Utilities for creating various Netty constructs based on whether we're using EPOLL or NIO.
  */
 public class NettyUtils {
-  /** Creates a new ThreadFactory which prefixes each thread with the given name. */
+  /** Creates a new ThreadFactory which prefixes each thread with the given name.
+   * 创建线程工厂,给定前缀
+   */
   public static ThreadFactory createThreadFactory(String threadPoolPrefix) {
     return new DefaultThreadFactory(threadPoolPrefix, true);
   }
@@ -83,12 +85,17 @@ public class NettyUtils {
   /**
    * Creates a LengthFieldBasedFrameDecoder where the first 8 bytes are the length of the frame.
    * This is used before all decoders.
+   * 对从管道中读取的ByteBuf按照数据帧进行解析
+   *
    */
   public static TransportFrameDecoder createFrameDecoder() {
     return new TransportFrameDecoder();
   }
 
-  /** Returns the remote address on the channel or "&lt;unknown remote&gt;" if none exists. */
+  /** Returns the remote address on the channel or "&lt;unknown remote&gt;" if none exists.
+   * 从通道获取远程地址
+   *
+   */
   public static String getRemoteAddress(Channel channel) {
     if (channel != null && channel.remoteAddress() != null) {
       return channel.remoteAddress().toString();
@@ -101,6 +108,7 @@ public class NettyUtils {
    * are disabled for TransportClients because the ByteBufs are allocated by the event loop thread,
    * but released by the executor thread rather than the event loop thread. Those thread-local
    * caches actually delay the recycling of buffers, leading to larger memory usage.
+   * 创建池化的ByteBuf分配器但禁用线程本地缓存。
    */
   public static PooledByteBufAllocator createPooledByteBufAllocator(
       boolean allowDirectBufs,
@@ -122,7 +130,9 @@ public class NettyUtils {
     );
   }
 
-  /** Used to get defaults from Netty's private static fields. */
+  /** Used to get defaults from Netty's private static fields.
+   * 获取私有的静态字段的值
+   */
   private static int getPrivateStaticField(String name) {
     try {
       Field f = PooledByteBufAllocator.DEFAULT.getClass().getDeclaredField(name);

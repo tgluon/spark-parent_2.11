@@ -41,7 +41,7 @@ import org.apache.spark.network.util.NettyUtils;
 import org.apache.spark.network.util.TransportConf;
 
 /**
- * 作用:RPC框架的服务端，提供高效的、低级别的流服务。
+ * 作用:RPC框架的传输服务端,提供高效的、低级别的流服务。
  * Server for the efficient, low-level streaming service.
  */
 public class TransportServer implements Closeable {
@@ -59,6 +59,7 @@ public class TransportServer implements Closeable {
     /**
      * Creates a TransportServer that binds to the given host and the given port, or to any available
      * if 0. If you don't want to bind to any special host, set "hostToBind" to null.
+     *
      */
     public TransportServer(
             TransportContext context,
@@ -67,14 +68,16 @@ public class TransportServer implements Closeable {
             RpcHandler appRpcHandler,
             List<TransportServerBootstrap> bootstraps) {
         this.context = context;
+        // 传输上下文的配置信息
         this.conf = context.getConf();
         this.appRpcHandler = appRpcHandler;
+        // 使用guava的Lists创建一个List,并将bootstraps放入list
         this.bootstraps = Lists.newArrayList(Preconditions.checkNotNull(bootstraps));
 
         try {
             init(hostToBind, portToBind);
         } catch (RuntimeException e) {
-            // 关闭退出
+            // 关闭调用对象,释放可能占用的所有资源
             JavaUtils.closeQuietly(this);
             throw e;
         }
@@ -107,6 +110,7 @@ public class TransportServer implements Closeable {
         // 基于内存池的 ByteBuf 的分配器
         PooledByteBufAllocator allocator = NettyUtils.createPooledByteBufAllocator(
                 conf.preferDirectBufs(), true /* allowCache */, conf.serverThreads());
+
         // 创建ServerBootstrap
         bootstrap = new ServerBootstrap()
                 .group(bossGroup, workerGroup)

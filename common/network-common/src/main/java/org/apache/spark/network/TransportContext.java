@@ -61,10 +61,13 @@ import org.apache.spark.network.util.TransportFrameDecoder;
 
 public class TransportContext {
   private static final Logger logger = LoggerFactory.getLogger(TransportContext.class);
+
   // 传输上下文的配置信息TransportConf
   private final TransportConf conf;
+
   // 对客户端请求消息进行处理的RpcHandler
   private final RpcHandler rpcHandler;
+
   private final boolean closeIdleConnections;
 
   /**

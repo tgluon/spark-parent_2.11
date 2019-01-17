@@ -50,7 +50,7 @@ private[spark] class CsvSink(val property: Properties, val registry: MetricRegis
   }
 
   MetricsSystem.checkMinimalPollingPeriod(pollUnit, pollPeriod)
-
+  // 拉取目录
   val pollDir = Option(property.getProperty(CSV_KEY_DIR)) match {
     case Some(s) => s
     case None => CSV_DEFAULT_DIR

@@ -60,7 +60,13 @@ import org.apache.spark.network.util.JavaUtils
 import org.apache.spark.serializer.{DeserializationStream, SerializationStream, SerializerInstance}
 import org.apache.spark.util.logging.RollingFileAppender
 
-/** CallSite represents a place in user code. It can have a short and a long form. */
+/**
+  * CallSite represents a place in user code. It can have a short and a long form.
+  * CallSite 中存储了线程栈中最靠近栈顶的⽤户类以及最靠近栈底的 Scala 或者
+  * Spark 核⼼类，这个变量其实主要是给开发者看的，对于具体程序的运⾏没有必然
+  * 的影响。当然它的信息也会反应在 SparkUI 的界⾯上的
+  *
+  */
 private[spark] case class CallSite(shortForm: String, longForm: String)
 
 private[spark] object CallSite {
@@ -1243,6 +1249,7 @@ private[spark] object Utils extends Logging {
   }
 
   /**
+    * tryOrStopSparkContext方法可以保证当listenerThread的内部循环抛出异常后启动一个新的线程停止SparkContext
     * Execute a block of code that evaluates to Unit, stop SparkContext if there is any uncaught
     * exception
     *

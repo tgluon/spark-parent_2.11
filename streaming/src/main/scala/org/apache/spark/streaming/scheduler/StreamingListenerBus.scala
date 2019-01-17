@@ -21,6 +21,8 @@ import org.apache.spark.scheduler.{LiveListenerBus, SparkListener, SparkListener
 import org.apache.spark.util.ListenerBus
 
 /**
+  * 用于将StreamingListenerEvent类型的事件投递到StreamingListener类型的监听器，
+  * 此外还会将StreamingListenerEvent类型的事件交给SparkListenerBus。
  * A Streaming listener bus to forward events to StreamingListeners. This one will wrap received
  * Streaming events as WrappedStreamingListenerEvent and send them to Spark listener bus. It also
  * registers itself with Spark listener bus, so that it can receive WrappedStreamingListenerEvents,

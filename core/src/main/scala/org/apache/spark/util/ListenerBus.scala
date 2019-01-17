@@ -26,33 +26,46 @@ import scala.util.control.NonFatal
 import org.apache.spark.internal.Logging
 
 /**
- * An event bus which posts events to its listeners.
- */
+  * SparkUI 的各个监控指标都是， 由 ListenerBus 最为生产者将消息， 推送到消息缓存出默
+  * 认支持 1 万， 然后推送给各个 Listener 进行处理， 然后我们的 Spark 的 webUIPage 去获取各
+  * 个 Listener 的数据， 进行展示
+  * An event bus which posts events to its listeners.
+  * ListenerBus是个泛型特质，其泛型参数为 [L <: AnyRef, E]，其中L是代表监听器的泛型参数，
+  * 可以看到ListenerBus支持任何类型的监听器，E是代表事件的泛型参数。
+  */
 private[spark] trait ListenerBus[L <: AnyRef, E] extends Logging {
 
 
   // Marked `private[spark]` for access in tests.
+  // 用于维护所有注册的监听器，其数据结构为CopyOnWriteArrayList[L]
   private[spark] val listeners = new CopyOnWriteArrayList[L]
 
   /**
-   * Add a listener to listen events. This method is thread-safe and can be called in any thread.
-   */
+    * 向listeners中添加监听器的方法，由于listeners采用CopyOnWriteArrayList来实现，
+    * 所以addListener方法是线程安全的；
+    * Add a listener to listen events. This method is thread-safe and can be called in any thread.
+    */
   final def addListener(listener: L): Unit = {
     listeners.add(listener)
   }
 
   /**
-   * Remove a listener and it won't receive any events. This method is thread-safe and can be called
-   * in any thread.
-   */
+    * 从listeners中移除监听器的方法，由于listeners采用CopyOnWriteArrayList来实现，
+    * 所以removeListener方法是线程安全的；
+    * Remove a listener and it won't receive any events. This method is thread-safe and can be called
+    * in any thread.
+    */
   final def removeListener(listener: L): Unit = {
     listeners.remove(listener)
   }
 
   /**
-   * Post the event to all registered listeners. The `postToAll` caller should guarantee calling
-   * `postToAll` in the same thread for all events.
-   */
+    * 此方法的作用是将事件投递给所有的监听器。虽然CopyOnWriteArrayList本身是线程的安全的，
+    * 但是由于postToAll方法内部引入了“先检查后执行”的逻辑，因而postToAll方法不是线程安全的，
+    * 所以所有对postToAll方法的调用应当保证在同一个线程中；
+    * Post the event to all registered listeners. The `postToAll` caller should guarantee calling
+    * `postToAll` in the same thread for all events.
+    */
   def postToAll(event: E): Unit = {
     // JavaConverters can create a JIterableWrapper if we use asScala.
     // However, this method will be called frequently. To avoid the wrapper cost, here we use
@@ -70,9 +83,10 @@ private[spark] trait ListenerBus[L <: AnyRef, E] extends Logging {
   }
 
   /**
-   * Post an event to the specified listener. `onPostEvent` is guaranteed to be called in the same
-   * thread for all listeners.
-   */
+    * 用于将事件投递给指定的监听器，此方法只提供了接口定义，具体实现需要子类提供；
+    * Post an event to the specified listener. `onPostEvent` is guaranteed to be called in the same
+    * thread for all listeners.
+    */
   protected def doPostEvent(listener: L, event: E): Unit
 
   private[spark] def findListenersByClass[T <: L : ClassTag](): Seq[T] = {

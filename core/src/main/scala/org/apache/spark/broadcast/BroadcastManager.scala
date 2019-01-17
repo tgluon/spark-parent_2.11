@@ -24,6 +24,13 @@ import scala.reflect.ClassTag
 import org.apache.spark.{SecurityManager, SparkConf}
 import org.apache.spark.internal.Logging
 
+/**
+  * 用于将配置信息和序列化后的RDD,Job及ShuffleDependency等信息在本地存储。如果为了容灾,也会复制到其他节点上。
+  *
+  * @param isDriver        标识是否是driver端
+  * @param conf            配置信息
+  * @param securityManager 安全管理器
+  */
 private[spark] class BroadcastManager(
                                        val isDriver: Boolean,
                                        conf: SparkConf,
@@ -36,11 +43,14 @@ private[spark] class BroadcastManager(
   initialize()
 
   // Called by SparkContext or Executor before using Broadcast
+  // 在使用Broadcast之前由SparkContext或Executor调用
   private def initialize() {
     synchronized {
+      // 判断BroadcastManager是否已经初始化,以保证BroadcastManager只初始化一次
       if (!initialized) {
         broadcastFactory = new TorrentBroadcastFactory
         broadcastFactory.initialize(isDriver, conf, securityManager)
+        // 将BroadcastManager标记为已初始化状态
         initialized = true
       }
     }
@@ -49,14 +59,28 @@ private[spark] class BroadcastManager(
   def stop() {
     broadcastFactory.stop()
   }
-
+  // 下一个广播对象的广播ID
   private val nextBroadcastId = new AtomicLong(0)
 
+  /**
+    *
+    * @param value_ 值
+    * @param isLocal 是否是local模式
+    * @tparam T
+    * @return
+    */
   def newBroadcast[T: ClassTag](value_ : T, isLocal: Boolean): Broadcast[T] = {
     // 使用broadcastFactory创建广播变量
     broadcastFactory.newBroadcast[T](value_, isLocal, nextBroadcastId.getAndIncrement())
   }
 
+  /**
+    * 移除广播变量
+    *
+    * @param id               id
+    * @param removeFromDriver 是否从driver端移除
+    * @param blocking         块
+    */
   def unbroadcast(id: Long, removeFromDriver: Boolean, blocking: Boolean) {
     broadcastFactory.unbroadcast(id, removeFromDriver, blocking)
   }

@@ -81,8 +81,11 @@ public class TransportClient implements Closeable {
 
     private final Channel channel;
     private final TransportResponseHandler handler;
+
+    // @Nullable表示允许为null
     @Nullable
     private String clientId;
+
     private volatile boolean timedOut;
 
     public TransportClient(Channel channel, TransportResponseHandler handler) {
@@ -125,10 +128,10 @@ public class TransportClient implements Closeable {
         this.clientId = id;
     }
 
-    // TransportClient一共有五个方法用于发送请求
 
     /**
-     * 从远端协商好的流中请求单个块；
+     * TransportClient一共有五个方法用于发送请求
+     * 从远端协商好的流中请求单个块
      * Requests a single chunk from the remote side, from the pre-negotiated streamId.
      * <p>
      * Chunk indices go from 0 onwards. It is valid to request the same chunk multiple times, though
@@ -182,7 +185,7 @@ public class TransportClient implements Closeable {
     }
 
     /**
-     * 使用流的ID，从远端获取流数据；
+     * 使用流的ID，从远端获取流数据
      * Request to stream the data with the given stream ID from the remote end.
      *
      * @param streamId The stream to fetch.
@@ -226,7 +229,7 @@ public class TransportClient implements Closeable {
     }
 
     /**
-     * 向服务端发送RPC的请求，通过At least Once Delivery原则保证请求不会丢失；
+     * 向服务端发送RPC的请求，通过At least Once Delivery原则保证请求不会丢失
      * Sends an opaque message to the RpcHandler on the server-side. The callback will be invoked
      * with the server's response or upon any failure.
      *
@@ -253,7 +256,8 @@ public class TransportClient implements Closeable {
         handler.addRpcRequest(requestId, callback);
 
         // 发送RPC请求
-        channel.writeAndFlush(new RpcRequest(requestId, new NioManagedBuffer(message))).addListener(
+        channel.writeAndFlush(
+                new RpcRequest(requestId, new NioManagedBuffer(message))).addListener(
                 new ChannelFutureListener() {
                     @Override
                     public void operationComplete(ChannelFuture future) throws Exception {
@@ -287,6 +291,7 @@ public class TransportClient implements Closeable {
      * a specified timeout for a response.
      */
     public ByteBuffer sendRpcSync(ByteBuffer message, long timeoutMs) {
+        // 异步编程
         final SettableFuture<ByteBuffer> result = SettableFuture.create();
 
         sendRpc(message, new RpcResponseCallback() {

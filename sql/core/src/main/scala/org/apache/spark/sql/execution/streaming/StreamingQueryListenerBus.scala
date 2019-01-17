@@ -26,6 +26,8 @@ import org.apache.spark.sql.streaming.StreamingQueryListener
 import org.apache.spark.util.ListenerBus
 
 /**
+  * 用于将StreamingQueryListener.Event类型的事件投递到StreamingQueryListener类型的监听器，
+  * 此外还会将StreamingQueryListener.Event类型的事件交给SparkListenerBus
  * A bus to forward events to [[StreamingQueryListener]]s. This one will send received
  * [[StreamingQueryListener.Event]]s to the Spark listener bus. It also registers itself with
  * Spark listener bus, so that it can receive [[StreamingQueryListener.Event]]s and dispatch them

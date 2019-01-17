@@ -32,6 +32,7 @@ private[spark] class Slf4jSink(
     val registry: MetricRegistry,
     securityMgr: SecurityManager)
   extends Sink {
+  // 默认周期
   val SLF4J_DEFAULT_PERIOD = 10
   val SLF4J_DEFAULT_UNIT = "SECONDS"
 

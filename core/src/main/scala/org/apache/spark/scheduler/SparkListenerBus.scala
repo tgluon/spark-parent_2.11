@@ -20,6 +20,7 @@ package org.apache.spark.scheduler
 import org.apache.spark.util.ListenerBus
 
 /**
+  * 用于将SparkListenerEvent类型的事件投递到SparkListenerInterface类型的监听器；
  * A [[SparkListenerEvent]] bus that relays [[SparkListenerEvent]]s to its listeners
  */
 private[spark] trait SparkListenerBus
