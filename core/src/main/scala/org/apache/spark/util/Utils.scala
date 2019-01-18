@@ -61,16 +61,20 @@ import org.apache.spark.serializer.{DeserializationStream, SerializationStream, 
 import org.apache.spark.util.logging.RollingFileAppender
 
 /**
+  * 通常情况下被用做数据载体，也即是Java里面的VO
   * CallSite represents a place in user code. It can have a short and a long form.
-  * CallSite 中存储了线程栈中最靠近栈顶的⽤户类以及最靠近栈底的 Scala 或者
-  * Spark 核⼼类，这个变量其实主要是给开发者看的，对于具体程序的运⾏没有必然
-  * 的影响。当然它的信息也会反应在 SparkUI 的界⾯上的
+  * 这个对象是一个case class,case class通常情况下被用做数据载体，
+  * 也即是Java里面的VO，这个类里面保存了两个东西，一个是SHORT_FORM,
+  * 一个是LONG_FORM,字面上的意思是短格式和长格式，那么这两个东西究竟是什么东西呢？
+  * 分析代码可知，这个方法是取当前线程的堆栈信息，遍历堆栈，将方法名符合一定规则的放入栈顶
   *
   */
 private[spark] case class CallSite(shortForm: String, longForm: String)
 
 private[spark] object CallSite {
+  // 短格式
   val SHORT_FORM = "callSite.short"
+  // 长格式
   val LONG_FORM = "callSite.long"
   val empty = CallSite("", "")
 }
@@ -1414,16 +1418,21 @@ private[spark] object Utils extends Logging {
     // package. We track the last (shallowest) contiguous Spark method. This might be an RDD
     // transformation, a SparkContext function (such as parallelize), or anything else that leads
     // to instantiation of an RDD. We also track the first (deepest) user method, file, and line.
+    // 继续往上爬堆栈跟踪，直到我们发现第一个函数不在spark包内。我们跟踪最后一个(最浅的)连续的Spark方法。
+    // 这可能是一个RDD转换，一个SparkContext函数(例如parallelize)，或者其他导致RDD实例化的东西。
+    // 我们还跟踪第一个(最深的)用户方法、文件和行。
     var lastSparkMethod = "<unknown>"
     var firstUserFile = "<unknown>"
     var firstUserLine = 0
     var insideSpark = true
     var callStack = new ArrayBuffer[String]() :+ "<unknown>"
-
+    // 返回当前正在执行的线程对象的引用。
     Thread.currentThread.getStackTrace().foreach { ste: StackTraceElement =>
       // When running under some profilers, the current stack trace might contain some bogus
       // frames. This is intended to ensure that we don't crash in these situations by
       // ignoring any frames that we can't examine.
+      // 在某些profiler下运行时，当前堆栈跟踪可能包含一些假frames
+      // 这是为了确保我们在这些情况下不会忽略任何我们不能检查的框架
       if (ste != null && ste.getMethodName != null
         && !ste.getMethodName.contains("getStackTrace")) {
         if (insideSpark) {

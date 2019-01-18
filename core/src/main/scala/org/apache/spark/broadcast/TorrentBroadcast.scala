@@ -60,9 +60,9 @@ private[spark] class TorrentBroadcast[T: ClassTag](obj: T, id: Long)
   /**
     * Value of the broadcast object on executors. This is reconstructed by [[readBroadcastBlock]],
     * which builds this value by reading blocks from the driver and/or other executors.
-    *
     * On the driver, if the value is required, it is read lazily from the block manager.
     */
+
   /**
     * 从Executor或者Driver上读取的广播的值。_value是通过调用readBroadcastBlock方法获得的广播对象。
     * 由于_value是个lazy及val修饰的属性，因此在构造TorrentBroadcast实例的时候不会调用readBroadcastBlock
@@ -111,7 +111,13 @@ private[spark] class TorrentBroadcast[T: ClassTag](obj: T, id: Long)
     _value
   }
 
+  /**
+    * 计算校验块
+    * @param block
+    * @return
+    */
   private def calcChecksum(block: ByteBuffer): Int = {
+    // Adler-32校验算法
     val adler = new Adler32()
     if (block.hasArray) {
       adler.update(block.array, block.arrayOffset + block.position, block.limit - block.position)
@@ -153,11 +159,13 @@ private[spark] class TorrentBroadcast[T: ClassTag](obj: T, id: Long)
       */
     val blocks =
       TorrentBroadcast.blockifyObject(value, blockSize, SparkEnv.get.serializer, compressionCodec)
-    /**4.如果需要费分片广播块生成校验和，则创建和第三步转换的块数量一致的checksums数组*/
+
+    /** 4.如果需要费分片广播块生成校验和，则创建和第三步转换的块数量一致的checksums数组 */
     if (checksumEnabled) {
       checksums = new Array[Int](blocks.length)
     }
     blocks.zipWithIndex.foreach { case (block, i) =>
+
       /**
         * 5.如果需要给分片广播生成校验和，则给分片广播块生成校验和
         */
@@ -178,20 +186,34 @@ private[spark] class TorrentBroadcast[T: ClassTag](obj: T, id: Long)
   private def readBlocks(): Array[ChunkedByteBuffer] = {
     // Fetch chunks of data. Note that all these chunks are stored in the BlockManager and reported
     // to the driver, so other executors can pull these chunks from this executor as well.
+    /**
+      *1.新建用于存储每个分片广播块的数组blocks，并获取当前SparkEnv的BlockManager组件。
+      */
     val blocks = new Array[ChunkedByteBuffer](numBlocks)
-    val bm = SparkEnv.get.blockManager
 
+    val bm = SparkEnv.get.blockManager
+    /**2.对各个广播分片进行随机洗牌，避免对广播块的获取出现"热点"，提升性能。*/
     for (pid <- Random.shuffle(Seq.range(0, numBlocks))) {
       val pieceId = BroadcastBlockId(id, "piece" + pid)
       logDebug(s"Reading piece $pieceId of $broadcastId")
       // First try getLocalBytes because there is a chance that previous attempts to fetch the
       // broadcast blocks have already fetched some of the blocks. In that case, some blocks
       // would be available locally (on this executor).
+      /**
+        * 3.调用BlockManager的getLocalBytes方法从本地的存储体系中获取序列化的分片广播块，
+        * 如果本地可以获取，则将分片广播入blocks，并调用releaseLock方法释放此分片广播块的锁
+        */
       bm.getLocalBytes(pieceId) match {
         case Some(block) =>
           blocks(pid) = block
           releaseLock(pieceId)
         case None =>
+          /**
+            * 4.如果本地没有，则调用BlockManger的getRemoteBytes方法从远端的存储体系中获取分片广播块。
+            * 对于获取的分片广播再次调用calcChecksum方法计算校验和，并将此校验和与调用writeBlocks
+            * 方法是存入checksums数组的校验和进行比较。如果校验和不相同，说明块的数据有损坏，此时
+            * 抛出异常。
+            */
           bm.getRemoteBytes(pieceId) match {
             case Some(b) =>
               if (checksumEnabled) {
@@ -203,6 +225,10 @@ private[spark] class TorrentBroadcast[T: ClassTag](obj: T, id: Long)
               }
               // We found the block from remote executors/driver's BlockManager, so put the block
               // in this executor's BlockManager.
+              /**
+                * 5.如果校验和相同，则调用BlockManger的putBytes方法将分片广播块写入本地存储体系，
+                * 以便于当Excutor的其他任务不用再次获取分片广播块，最后将分片广播块放入blocks。
+                */
               if (!bm.putBytes(pieceId, b, StorageLevel.MEMORY_AND_DISK_SER, tellMaster = true)) {
                 throw new SparkException(
                   s"Failed to store $pieceId of $broadcastId in local BlockManager")
@@ -213,6 +239,7 @@ private[spark] class TorrentBroadcast[T: ClassTag](obj: T, id: Long)
           }
       }
     }
+    /**6.返回blocks中的所有分片广播块*/
     blocks
   }
 

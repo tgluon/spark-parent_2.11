@@ -244,7 +244,7 @@ class SparkContext(config: SparkConf) extends Logging {
   private[spark] def eventLogDir: Option[URI] = _eventLogDir
 
   private[spark] def eventLogCodec: Option[String] = _eventLogCodec
-
+  // 判断是否是本地模式
   def isLocal: Boolean = Utils.isLocalMaster(_conf)
 
   /**
@@ -1029,12 +1029,15 @@ class SparkContext(config: SparkConf) extends Logging {
     assertNotStopped()
 
     // This is a hack to enforce loading hdfs-site.xml.
+    // 这是一个强制加载hdfs-site.xml的hack。
     // See SPARK-11227 for details.
     FileSystem.getLocal(hadoopConfiguration)
 
     // A Hadoop configuration can be about 10 KB, which is pretty big, so broadcast it.
+    /**广播hadoop配置文件*/
     val confBroadcast = broadcast(new SerializableConfiguration(hadoopConfiguration))
     val setInputPathsFunc = (jobConf: JobConf) => FileInputFormat.setInputPaths(jobConf, path)
+
     new HadoopRDD(
       this,
       confBroadcast,
@@ -1430,11 +1433,15 @@ class SparkContext(config: SparkConf) extends Logging {
     */
   def broadcast[T: ClassTag](value: T): Broadcast[T] = {
     assertNotStopped()
-    //classOf获取类的Class
-    // isAssignableFrom判定此 Class 对象所表示的类或接口与指定的 Class
-    // 参数所表示的类或接口是否相同,或是否是其超类或超接口。
+
+    /**
+      * classOf获取类的Class
+      * isAssignableFrom判定此Class对象所表示的类或接口与指定的Class
+      * 参数所表示的类或接口是否相同,或是否是其超类或超接口。
+      */
     require(!classOf[RDD[_]].isAssignableFrom(classTag[T].runtimeClass),
       "Can not directly broadcast RDDs; instead, call collect() and broadcast the result.")
+    // 无法直接广播RDD; 相反，调用collect()并广播结果
     // 初始化broadcastManager
     val bc = env.broadcastManager.newBroadcast[T](value, isLocal)
     val callSite = getCallSite

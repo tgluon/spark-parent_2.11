@@ -66,8 +66,8 @@ private[spark] class BroadcastManager(
     *
     * @param value_ 值
     * @param isLocal 是否是local模式
-    * @tparam T
-    * @return
+    * @tparam T 泛型
+    * @return 返回一个新的Broadcast实例
     */
   def newBroadcast[T: ClassTag](value_ : T, isLocal: Boolean): Broadcast[T] = {
     // 使用broadcastFactory创建广播变量
