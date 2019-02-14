@@ -175,10 +175,8 @@ public class TransportContext {
   private TransportChannelHandler createChannelHandler(Channel channel, RpcHandler rpcHandler) {
     TransportResponseHandler responseHandler = new TransportResponseHandler(channel);
     TransportClient client = new TransportClient(channel, responseHandler);
-    TransportRequestHandler requestHandler = new TransportRequestHandler(channel, client,
-      rpcHandler);
-    return new TransportChannelHandler(client, responseHandler, requestHandler,
-      conf.connectionTimeoutMs(), closeIdleConnections);
+    TransportRequestHandler requestHandler = new TransportRequestHandler(channel, client, rpcHandler);
+    return new TransportChannelHandler(client, responseHandler, requestHandler, conf.connectionTimeoutMs(), closeIdleConnections);
   }
 
   public TransportConf getConf() { return conf; }

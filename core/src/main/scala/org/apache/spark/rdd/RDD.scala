@@ -86,6 +86,7 @@ abstract class RDD[T: ClassTag](
     logWarning("Spark does not support nested RDDs (see SPARK-5063)")
   }
 
+  /** 校验SparkContext是否为null */
   private def sc: SparkContext = {
     if (_sc == null) {
       throw new SparkException(
@@ -102,6 +103,7 @@ abstract class RDD[T: ClassTag](
   }
 
   /** Construct an RDD with just a one-to-one dependency on one parent */
+  /** 针对窄依赖构建RDD */
   def this(@transient oneParent: RDD[_]) =
     this(oneParent.context, List(new OneToOneDependency(oneParent)))
 
@@ -168,14 +170,17 @@ abstract class RDD[T: ClassTag](
     */
   private def persist(newLevel: StorageLevel, allowOverride: Boolean): this.type = {
     // TODO: Handle changes of StorageLevel
-    //如果RDD指定了非NONE的存储级别，该存储级别将不能修改
+    // 如果RDD指定了非NONE的存储级别，该存储级别将不能修改
     if (storageLevel != StorageLevel.NONE && newLevel != storageLevel && !allowOverride) {
       throw new UnsupportedOperationException(
         "Cannot change storage level of an RDD after it was already assigned a level")
     }
-    //当RDD原来的存储级别为NONE时，可以对RDD
-    //进行持久化处理，在处理前需要先清洗出SparkContext
-    //中原来RDD相关存储元数据，然后加入该RDD持久化信息
+
+    /**
+      * --当RDD原来的存储级别为NONE时，可以对RDD
+      * 进行持久化处理，在处理前需要先清洗出SparkContext
+      * 中原来RDD相关存储元数据，然后加入该RDD持久化信息
+      */
     // If this is the first time this RDD is marked for persisting, register it
     // with the SparkContext for cleanups and accounting. Do this only once.
     if (storageLevel == StorageLevel.NONE) {
@@ -787,8 +792,8 @@ abstract class RDD[T: ClassTag](
     *                           An example of pipe the RDD data of groupBy() in a streaming way,
     *                           instead of constructing a huge String to concat all the elements:
     *                           {{{
-    *                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         def printRDDElement(record:(String, Seq[String]), f:String=>Unit) =
-    *                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           for (e <- record._2) {f(e)}
+    *                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  def printRDDElement(record:(String, Seq[String]), f:String=>Unit) =
+    *                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    for (e <- record._2) {f(e)}
     *                           }}}
     * @param separateWorkingDir Use separate working directories for each task.
     * @param bufferSize         Buffer size for the stdin writer for the piped process.
@@ -1249,7 +1254,7 @@ abstract class RDD[T: ClassTag](
     *       To handle very large results, consider using
     *
     *       {{{
-    *                                                                                                                                      rdd.map(x => (x, 1L)).reduceByKey(_ + _)
+    *                                                                                                                                                                                                                   rdd.map(x => (x, 1L)).reduceByKey(_ + _)
     *       }}}
     *
     *       , which returns an RDD[T, Long] instead of a map.

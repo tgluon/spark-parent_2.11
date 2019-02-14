@@ -23,9 +23,9 @@ import org.apache.spark.streaming.StreamingContext
 import org.apache.spark.ui.{SparkUI, SparkUITab}
 
 /**
- * Spark Web UI tab that shows statistics of a streaming job.
- * This assumes the given SparkContext has enabled its SparkUI.
- */
+  * Spark Web UI tab that shows statistics of a streaming job.
+  * This assumes the given SparkContext has enabled its SparkUI.
+  */
 private[spark] class StreamingTab(val ssc: StreamingContext)
   extends SparkUITab(StreamingTab.getSparkUI(ssc), "streaming") with Logging {
 
@@ -34,6 +34,7 @@ private[spark] class StreamingTab(val ssc: StreamingContext)
   private val STATIC_RESOURCE_DIR = "org/apache/spark/streaming/ui/static"
 
   val parent = getSparkUI(ssc)
+  /** StreamingTab 中添加的 jobListener */
   val listener = ssc.progressListener
 
   ssc.addStreamingListener(listener)

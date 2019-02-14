@@ -27,6 +27,7 @@ import org.apache.spark.util.Utils
 
 /** Page showing list of RDD's currently stored in the cluster */
 private[ui] class StoragePage(parent: StorageTab) extends WebUIPage("") {
+  /**在StoragePage里面又listener对象。*/
   private val listener = parent.listener
 
   def render(request: HttpServletRequest): Seq[Node] = {

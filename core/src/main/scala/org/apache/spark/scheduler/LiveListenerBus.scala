@@ -41,6 +41,7 @@ private[spark] class LiveListenerBus(val sparkContext: SparkContext) extends Spa
 
   // Cap the capacity of the event queue so we get an explicit error (rather than
   // an OOM exception) if it's perpetually being added to more quickly than it's being drained.
+  // 事件队列容量
   private lazy val EVENT_QUEUE_CAPACITY = validateAndGetQueueSize()
   /**
     * 是SparkListenerEvent事件的阻塞队列，队列大小可以通过
@@ -83,6 +84,7 @@ private[spark] class LiveListenerBus(val sparkContext: SparkContext) extends Spa
 
   // A counter that represents the number of events produced and consumed in the queue
   /** 用于当有新的事件到来时释放信号量，当对事件进行处理时获取信号量 */
+  // 资源有限的情况下,用于限流
   private val eventLock = new Semaphore(0)
   /** 处理事件的线程
     * 1、不断获取信号量（当可以获取信号量时，说明还有事件未处理）；
@@ -92,6 +94,7 @@ private[spark] class LiveListenerBus(val sparkContext: SparkContext) extends Spa
     * 并调用SparkListenerBus的doPostEvent/555、法对事件进行匹配后执行监听器的相应方法）；
     *
     */
+  // 消息订阅
   private val listenerThread = new Thread(name) {
     setDaemon(true)
 
@@ -209,6 +212,7 @@ private[spark] class LiveListenerBus(val sparkContext: SparkContext) extends Spa
   /**
     * For testing only. Return whether the listener daemon thread is still alive.
     * Exposed for testing.
+    * 仅供测试。 返回侦听器守护程序线程是否仍处于活动状态。 暴露于测试。
     */
   def listenerThreadIsAlive: Boolean = listenerThread.isAlive
 
@@ -258,9 +262,11 @@ private[spark] class LiveListenerBus(val sparkContext: SparkContext) extends Spa
 
 private[spark] object LiveListenerBus {
   // Allows for Context to check whether stop() call is made within listener thread
+  // 允许Context检查是否在侦听器线程内进行了stop（）调用
   val withinListenerThread: DynamicVariable[Boolean] = new DynamicVariable[Boolean](false)
 
   /** The thread name of Spark listener bus */
+  /** Spark侦听器总线的线程名称 */
   val name = "SparkListenerBus"
 }
 

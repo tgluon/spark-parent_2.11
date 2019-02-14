@@ -63,12 +63,16 @@ import org.apache.spark.util._
 /**
   * Main entry point for Spark functionality. A SparkContext represents the connection to a Spark
   * cluster, and can be used to create RDDs, accumulators and broadcast variables on that cluster.
+  * Spark功能的主要入口点。 SparkContext表示与Spark群集的连接，可用于在该群集上创建RDD，累加器和广播变量。
   *
   * Only one SparkContext may be active per JVM.  You must `stop()` the active SparkContext before
   * creating a new one.  This limitation may eventually be removed; see SPARK-2243 for more details.
+  * 每个JVM只能激活一个SparkContext。 你必须在创建一个新的SparkContext之前“停止（）”。 最终可能会删除此限制;
+  * 有关详细信息，请参阅SPARK-2243。
   *
   * @param config a Spark Config object describing the application configuration. Any settings in
   *               this config overrides the default configs as well as system properties.
+  *               描述应用程序配置的Spark Config对象。 此配置中的任何设置都会覆盖默认配置以及系统属性。
   */
 class SparkContext(config: SparkConf) extends Logging {
 
@@ -244,6 +248,7 @@ class SparkContext(config: SparkConf) extends Logging {
   private[spark] def eventLogDir: Option[URI] = _eventLogDir
 
   private[spark] def eventLogCodec: Option[String] = _eventLogCodec
+
   // 判断是否是本地模式
   def isLocal: Boolean = Utils.isLocalMaster(_conf)
 
@@ -441,6 +446,11 @@ class SparkContext(config: SparkConf) extends Logging {
 
     // "_jobProgressListener" should be set up before creating SparkEnv because when creating
     // "SparkEnv", some messages will be posted to "listenerBus" and we should not miss them.
+    /**
+      * 应该在创建SparkEnv之前设置“_jobProgressListener”，因为在创建“SparkEnv”时，
+      * 一些消息将被发布到“listenerBus”，我们不应该错过它们。
+      */
+    // SparkContext 中添加的 jobListener
     _jobProgressListener = new JobProgressListener(_conf)
     listenerBus.addListener(jobProgressListener)
 
@@ -464,14 +474,14 @@ class SparkContext(config: SparkConf) extends Logging {
         None
       }
 
-    _ui =
-      if (conf.getBoolean("spark.ui.enabled", true)) {
-        Some(SparkUI.createLiveUI(this, _conf, listenerBus, _jobProgressListener,
-          _env.securityManager, appName, startTime = startTime))
-      } else {
-        // For tests, do not enable the UI
-        None
-      }
+    /** SparkUI的初始化及启动 */
+    _ui = if (conf.getBoolean("spark.ui.enabled", true)) {
+      Some(SparkUI.createLiveUI(this, _conf, listenerBus, _jobProgressListener,
+        _env.securityManager, appName, startTime = startTime))
+    } else {
+      // For tests, do not enable the UI
+      None
+    }
     // Bind the UI before starting the task scheduler to communicate
     // the bound port to the cluster manager properly
     _ui.foreach(_.bind())
@@ -575,12 +585,11 @@ class SparkContext(config: SparkConf) extends Logging {
       }
     _executorAllocationManager.foreach(_.start())
 
-    _cleaner =
-      if (_conf.getBoolean("spark.cleaner.referenceTracking", true)) {
-        Some(new ContextCleaner(this))
-      } else {
-        None
-      }
+    _cleaner = if (_conf.getBoolean("spark.cleaner.referenceTracking", true)) {
+      Some(new ContextCleaner(this))
+    } else {
+      None
+    }
     _cleaner.foreach(_.start())
 
     setupAndStartListenerBus()
@@ -1034,7 +1043,7 @@ class SparkContext(config: SparkConf) extends Logging {
     FileSystem.getLocal(hadoopConfiguration)
 
     // A Hadoop configuration can be about 10 KB, which is pretty big, so broadcast it.
-    /**广播hadoop配置文件*/
+    /** 广播hadoop配置文件 */
     val confBroadcast = broadcast(new SerializableConfiguration(hadoopConfiguration))
     val setInputPathsFunc = (jobConf: JobConf) => FileInputFormat.setInputPaths(jobConf, path)
 
@@ -1446,11 +1455,15 @@ class SparkContext(config: SparkConf) extends Logging {
     val bc = env.broadcastManager.newBroadcast[T](value, isLocal)
     val callSite = getCallSite
     logInfo("Created broadcast " + bc.id + " from " + callSite.shortForm)
-    // 在调用 sc.Broadcast 方法中， 会去 ContextCleaner 中注册一下，之前讲的缓存RDD
-    // 的时候也要去 ContextCleaner 中注册一下， 两个差不多，都是为了回收。
-    //cleaner.foreach(_.registerBroadcastForCleanup(bc))当广播变量引用为null的时候，
-    // 在context cleaner 里面会回调 broadcastManager.unbroadcast 方法， 会把 Broadcast
-    // 变量从 BlockManager 存储中干掉。unbroadcast
+
+    /**
+      * 在调用 sc.Broadcast 方法中,会去 ContextCleaner 中注册一下,之前讲的缓存RDD
+      * 的时候也要去 ContextCleaner 中注册一下,两个差不多,都是为了回收。
+      * cleaner.foreach(_.registerBroadcastForCleanup(bc))当广播变量引用为null的时候，
+      * 在context cleaner里面会回调 broadcastManager.unbroadcast 方法,会把 Broadcast
+      * 变量从 BlockManager 存储中干掉unbroadcast
+      *
+      */
     cleaner.foreach(_.registerBroadcastForCleanup(bc))
     bc
   }
@@ -1744,6 +1757,7 @@ class SparkContext(config: SparkConf) extends Logging {
   private[spark] def unpersistRDD(rddId: Int, blocking: Boolean = true) {
     env.blockManager.master.removeRdd(rddId, blocking)
     persistentRdds.remove(rddId)
+    // 发布消息
     listenerBus.post(SparkListenerUnpersistRDD(rddId))
   }
 

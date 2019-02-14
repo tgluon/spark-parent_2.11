@@ -94,20 +94,21 @@ public class TransportServer implements Closeable {
         IOMode ioMode = IOMode.valueOf(conf.ioMode());
         /**
          * boss 线程组：用于服务端接受客户端的连接。
-         * worker 线程组：用于进行客户端的 SocketChannel 的数据读写。
+         * worker 线程组：用于进行客户端的SocketChannel的数据读写。
          *
-         * bossGroup 是用于服务端 的 accept 的, 即用于处理客户端的连接请求. 我们可以把 Netty 比作一个饭店,
-         * bossGroup 就像一个像一个前台接待, 当客户来到饭店吃时, 接待员就会引导顾客就坐, 为顾客端茶送水等. 而
-         * workerGroup, 其实就是实际上干活的啦, 它们负责客户端连接通道的 IO 操作: 当接待员 招待好顾客后, 就可
-         * 以稍做休息, 而此时后厨里的厨师们(workerGroup)就开始忙碌地准备饭菜了.
+         * bossGroup是用于服务端的accept的,即用于处理客户端的连接请求.我们可以把Netty比作一个饭店,
+         * bossGroup就像一个像一个前台接待,当客户来到饭店吃时,接待员就会引导顾客就坐,为顾客端茶送水等.而
+         * workerGroup,其实就是实际上干活的啦,它们负责客户端连接通道的IO操作:当接待员招待好顾客后,就可
+         * 以稍做休息,而此时后厨里的厨师们(workerGroup)就开始忙碌地准备饭菜了.
          *
          * 其它参考:https://www.jianshu.com/p/128ddc36e713
          */
         EventLoopGroup bossGroup =
                 NettyUtils.createEventLoop(ioMode, conf.serverThreads(), conf.getModuleName() + "-server");
+
         EventLoopGroup workerGroup = bossGroup;
 
-        // 基于内存池的 ByteBuf 的分配器
+        // 基于内存池的ByteBuf的分配器
         PooledByteBufAllocator allocator = NettyUtils.createPooledByteBufAllocator(
                 conf.preferDirectBufs(), true /* allowCache */, conf.serverThreads());
 
@@ -115,9 +116,10 @@ public class TransportServer implements Closeable {
         bootstrap = new ServerBootstrap()
                 .group(bossGroup, workerGroup)
                 .channel(NettyUtils.getServerChannelClass(ioMode))
-                // 设置 NioServerSocketChannel的可选项
+                // 设置NioServerSocketChannel的可选项
                 .option(ChannelOption.ALLOCATOR, allocator)
                 .childOption(ChannelOption.ALLOCATOR, allocator);
+
 
         if (conf.backLog() > 0) {
             bootstrap.option(ChannelOption.SO_BACKLOG, conf.backLog());
@@ -145,11 +147,14 @@ public class TransportServer implements Closeable {
 
         InetSocketAddress address = hostToBind == null ?
                 new InetSocketAddress(portToBind) : new InetSocketAddress(hostToBind, portToBind);
+
         channelFuture = bootstrap.bind(address);
+
         // 同步不可中断
         channelFuture.syncUninterruptibly();
 
         port = ((InetSocketAddress) channelFuture.channel().localAddress()).getPort();
+
         logger.debug("Shuffle server started on port: {}", port);
     }
 
@@ -162,11 +167,11 @@ public class TransportServer implements Closeable {
             // 将通道这只为null
             channelFuture = null;
         }
-        // 关闭主线程组
+        // 关闭主线程组,释放所有的资源
         if (bootstrap != null && bootstrap.group() != null) {
             bootstrap.group().shutdownGracefully();
         }
-        // 关闭子线程组
+        // 关闭子线程组,释放所有的资源
         if (bootstrap != null && bootstrap.childGroup() != null) {
             bootstrap.childGroup().shutdownGracefully();
         }

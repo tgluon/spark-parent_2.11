@@ -37,7 +37,9 @@ private[spark] trait ListenerBus[L <: AnyRef, E] extends Logging {
 
 
   // Marked `private[spark]` for access in tests.
-  // 用于维护所有注册的监听器，其数据结构为CopyOnWriteArrayList[L]
+  /** 用于维护所有注册的监听器，其数据结构为CopyOnWriteArrayList[L] **/
+  /** CopyOnWriteArrayList相当于线程安全的List **/
+
   private[spark] val listeners = new CopyOnWriteArrayList[L]
 
   /**
@@ -74,6 +76,7 @@ private[spark] trait ListenerBus[L <: AnyRef, E] extends Logging {
     while (iter.hasNext) {
       val listener = iter.next()
       try {
+        // 每当有新的事件那么关心该事件的所有listeners都会被触发
         doPostEvent(listener, event)
       } catch {
         case NonFatal(e) =>
@@ -89,8 +92,16 @@ private[spark] trait ListenerBus[L <: AnyRef, E] extends Logging {
     */
   protected def doPostEvent(listener: L, event: E): Unit
 
+  /**
+    * 查找与指定类型相同的监听器列表
+    *
+    * @tparam T
+    * @return Seq[T]
+    */
   private[spark] def findListenersByClass[T <: L : ClassTag](): Seq[T] = {
+    // 将T隐式转化成ClassTag
     val c = implicitly[ClassTag[T]].runtimeClass
+    // 将CopyOnWriteArrayList转化成scala集合类型
     listeners.asScala.filter(_.getClass == c).map(_.asInstanceOf[T]).toSeq
   }
 

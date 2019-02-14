@@ -24,8 +24,10 @@ import scala.collection.JavaConverters._
 import org.apache.spark.{SecurityManager, SparkConf, SparkContext}
 import org.apache.spark.internal.Logging
 import org.apache.spark.scheduler._
-import org.apache.spark.status.api.v1.{ApiRootResource, ApplicationAttemptInfo, ApplicationInfo,
-  UIRoot}
+import org.apache.spark.status.api.v1.{
+  ApiRootResource, ApplicationAttemptInfo, ApplicationInfo,
+  UIRoot
+}
 import org.apache.spark.storage.StorageStatusListener
 import org.apache.spark.ui.JettyUtils._
 import org.apache.spark.ui.env.{EnvironmentListener, EnvironmentTab}
@@ -36,32 +38,38 @@ import org.apache.spark.ui.storage.{StorageListener, StorageTab}
 import org.apache.spark.util.Utils
 
 /**
- * Top level user interface for a Spark application.
- */
-private[spark] class SparkUI private (
-    val sc: Option[SparkContext],
-    val conf: SparkConf,
-    securityManager: SecurityManager,
-    val environmentListener: EnvironmentListener,
-    val storageStatusListener: StorageStatusListener,
-    val executorsListener: ExecutorsListener,
-    val jobProgressListener: JobProgressListener,
-    val storageListener: StorageListener,
-    val operationGraphListener: RDDOperationGraphListener,
-    var appName: String,
-    val basePath: String,
-    val startTime: Long)
+  * Top level user interface for a Spark application.
+  * 主要负责与维护页面之间关系，使用jetty的API与jetty打交道。
+  */
+private[spark] class SparkUI private(
+                                      val sc: Option[SparkContext],
+                                      val conf: SparkConf,
+                                      securityManager: SecurityManager,
+                                      val environmentListener: EnvironmentListener,
+                                      val storageStatusListener: StorageStatusListener,
+                                      val executorsListener: ExecutorsListener,
+                                      val jobProgressListener: JobProgressListener,
+                                      val storageListener: StorageListener,
+                                      val operationGraphListener: RDDOperationGraphListener,
+                                      var appName: String,
+                                      val basePath: String,
+                                      val startTime: Long)
   extends WebUI(securityManager, securityManager.getSSLOptions("ui"), SparkUI.getUIPort(conf),
     conf, basePath, "SparkUI")
-  with Logging
-  with UIRoot {
+    with Logging
+    with UIRoot {
 
   val killEnabled = sc.map(_.conf.getBoolean("spark.ui.killEnabled", true)).getOrElse(false)
 
   var appId: String = _
 
   /** Initialize all components of the server. */
+  // Tab绑定到SparkUI
   def initialize() {
+    /**
+      * 这个时候，可以在SparkUI的initialize方法里面调用attachTab方法的时候，构建对应的Tab对象，
+      * 给对象传入的SparkUI对象里就包含了这些Listener的引用。就可以在相应的Page里面使用了。
+      */
     val jobsTab = new JobsTab(this)
     attachTab(jobsTab)
     val stagesTab = new StagesTab(this)
@@ -79,6 +87,7 @@ private[spark] class SparkUI private (
       "/stages/stage/kill", "/stages/", stagesTab.handleKillRequest,
       httpMethods = Set("GET", "POST")))
   }
+
   initialize()
 
   def getSparkUser: String = {
@@ -98,8 +107,8 @@ private[spark] class SparkUI private (
   }
 
   /**
-   * Return the application UI host:port. This does not include the scheme (http://).
-   */
+    * Return the application UI host:port. This does not include the scheme (http://).
+    */
   private[spark] def appUIHostPort = publicHostName + ":" + boundPort
 
   private[spark] def appUIAddress = s"http://$appUIHostPort"
@@ -152,24 +161,24 @@ private[spark] object SparkUI {
   }
 
   def createLiveUI(
-      sc: SparkContext,
-      conf: SparkConf,
-      listenerBus: SparkListenerBus,
-      jobProgressListener: JobProgressListener,
-      securityManager: SecurityManager,
-      appName: String,
-      startTime: Long): SparkUI = {
+                    sc: SparkContext,
+                    conf: SparkConf,
+                    listenerBus: SparkListenerBus,
+                    jobProgressListener: JobProgressListener,
+                    securityManager: SecurityManager,
+                    appName: String,
+                    startTime: Long): SparkUI = {
     create(Some(sc), conf, listenerBus, securityManager, appName,
       jobProgressListener = Some(jobProgressListener), startTime = startTime)
   }
 
   def createHistoryUI(
-      conf: SparkConf,
-      listenerBus: SparkListenerBus,
-      securityManager: SecurityManager,
-      appName: String,
-      basePath: String,
-      startTime: Long): SparkUI = {
+                       conf: SparkConf,
+                       listenerBus: SparkListenerBus,
+                       securityManager: SecurityManager,
+                       appName: String,
+                       basePath: String,
+                       startTime: Long): SparkUI = {
     val sparkUI = create(
       None, conf, listenerBus, securityManager, appName, basePath, startTime = startTime)
 
@@ -183,28 +192,32 @@ private[spark] object SparkUI {
   }
 
   /**
-   * Create a new Spark UI.
-   *
-   * @param sc optional SparkContext; this can be None when reconstituting a UI from event logs.
-   * @param jobProgressListener if supplied, this JobProgressListener will be used; otherwise, the
-   *                            web UI will create and register its own JobProgressListener.
-   */
+    * Create a new Spark UI.
+    * 在此方法里面创建了相应的Listener，并注册到了Spark的ListenerBus里面
+    *
+    * @param sc                  optional SparkContext; this can be None when reconstituting a UI from event logs.
+    * @param jobProgressListener if supplied, this JobProgressListener will be used; otherwise, the
+    *                            web UI will create and register its own JobProgressListener.
+    */
   private def create(
-      sc: Option[SparkContext],
-      conf: SparkConf,
-      listenerBus: SparkListenerBus,
-      securityManager: SecurityManager,
-      appName: String,
-      basePath: String = "",
-      jobProgressListener: Option[JobProgressListener] = None,
-      startTime: Long): SparkUI = {
+                      sc: Option[SparkContext],
+                      conf: SparkConf,
+                      listenerBus: SparkListenerBus,
+                      securityManager: SecurityManager,
+                      appName: String,
+                      basePath: String = "",
+                      jobProgressListener: Option[JobProgressListener] = None,
+                      startTime: Long): SparkUI = {
 
     val _jobProgressListener: JobProgressListener = jobProgressListener.getOrElse {
       val listener = new JobProgressListener(conf)
       listenerBus.addListener(listener)
       listener
     }
-
+    /**
+      * SparkUI 中注册 Listener
+      *
+      */
     val environmentListener = new EnvironmentListener
     val storageStatusListener = new StorageStatusListener(conf)
     val executorsListener = new ExecutorsListener(storageStatusListener, conf)
@@ -217,6 +230,7 @@ private[spark] object SparkUI {
     listenerBus.addListener(storageListener)
     listenerBus.addListener(operationGraphListener)
 
+    /** 最终返回构建好的SparkUI */
     new SparkUI(sc, conf, securityManager, environmentListener, storageStatusListener,
       executorsListener, _jobProgressListener, storageListener, operationGraphListener,
       appName, basePath, startTime)

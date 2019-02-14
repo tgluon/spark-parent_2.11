@@ -29,11 +29,12 @@ import org.apache.spark.internal.Logging
 import org.apache.spark.internal.config._
 
 /**
- * A util class for manipulating IO encryption and decryption streams.
- */
+  * A util class for manipulating IO encryption and decryption streams.
+  */
 private[spark] object CryptoStreamUtils extends Logging {
 
   // The initialization vector length in bytes.
+  // 初始化向量长度
   val IV_LENGTH_IN_BYTES = 16
   // The prefix of IO encryption related configurations in Spark configuration.
   val SPARK_IO_ENCRYPTION_COMMONS_CONFIG_PREFIX = "spark.io.encryption.commons.config."
@@ -41,12 +42,13 @@ private[spark] object CryptoStreamUtils extends Logging {
   val COMMONS_CRYPTO_CONF_PREFIX = "commons.crypto."
 
   /**
-   * Helper method to wrap `OutputStream` with `CryptoOutputStream` for encryption.
-   */
+    * Helper method to wrap `OutputStream` with `CryptoOutputStream` for encryption.
+    * 创建一个加密输出留
+    */
   def createCryptoOutputStream(
-      os: OutputStream,
-      sparkConf: SparkConf,
-      key: Array[Byte]): OutputStream = {
+                                os: OutputStream,
+                                sparkConf: SparkConf,
+                                key: Array[Byte]): OutputStream = {
     val properties = toCryptoConf(sparkConf)
     val iv = createInitializationVector(properties)
     os.write(iv)
@@ -56,12 +58,13 @@ private[spark] object CryptoStreamUtils extends Logging {
   }
 
   /**
-   * Helper method to wrap `InputStream` with `CryptoInputStream` for decryption.
-   */
+    * Helper method to wrap `InputStream` with `CryptoInputStream` for decryption.
+    * 创建一个加密输入流
+    */
   def createCryptoInputStream(
-      is: InputStream,
-      sparkConf: SparkConf,
-      key: Array[Byte]): InputStream = {
+                               is: InputStream,
+                               sparkConf: SparkConf,
+                               key: Array[Byte]): InputStream = {
     val properties = toCryptoConf(sparkConf)
     val iv = new Array[Byte](IV_LENGTH_IN_BYTES)
     is.read(iv, 0, iv.length)
@@ -71,8 +74,9 @@ private[spark] object CryptoStreamUtils extends Logging {
   }
 
   /**
-   * Get Commons-crypto configurations from Spark configurations identified by prefix.
-   */
+    * Get Commons-crypto configurations from Spark configurations identified by prefix.
+    * 从SparkConf中获取加密的配置信息
+    */
   def toCryptoConf(conf: SparkConf): Properties = {
     val props = new Properties()
     conf.getAll.foreach { case (k, v) =>
@@ -84,20 +88,21 @@ private[spark] object CryptoStreamUtils extends Logging {
     props
   }
 
+
   /**
-   * Creates a new encryption key.
-   */
+    * Creates a new encryption key.
+    */
   def createKey(conf: SparkConf): Array[Byte] = {
     val keyLen = conf.get(IO_ENCRYPTION_KEY_SIZE_BITS)
     val ioKeyGenAlgorithm = conf.get(IO_ENCRYPTION_KEYGEN_ALGORITHM)
     val keyGen = KeyGenerator.getInstance(ioKeyGenAlgorithm)
     keyGen.init(keyLen)
-    keyGen.generateKey().getEncoded()
+    keyGen.generateKey().getEncoded
   }
 
   /**
-   * This method to generate an IV (Initialization Vector) using secure random.
-   */
+    * This method to generate an IV (Initialization Vector) using secure random.
+    */
   private[this] def createInitializationVector(properties: Properties): Array[Byte] = {
     val iv = new Array[Byte](IV_LENGTH_IN_BYTES)
     val initialIVStart = System.currentTimeMillis()

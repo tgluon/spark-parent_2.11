@@ -62,6 +62,7 @@ private[spark] class ContextCleaner(sc: SparkContext) extends Logging {
   /**
    * A buffer to ensure that `CleanupTaskWeakReference`s are not garbage collected as long as they
    * have not been handled by the reference queue.
+    * 一个缓冲区，确保`CleanupTaskWeakReference`不会被垃圾收集，只要它们没有被引用队列处理。
    */
   private val referenceBuffer =
     Collections.newSetFromMap[CleanupTaskWeakReference](new ConcurrentHashMap)
@@ -159,7 +160,10 @@ private[spark] class ContextCleaner(sc: SparkContext) extends Logging {
     registerForCleanup(shuffleDependency, CleanShuffle(shuffleDependency.shuffleId))
   }
 
-  /** Register a Broadcast for cleanup when it is garbage collected. */
+  /**
+    * Register a Broadcast for cleanup when it is garbage collected.
+    * 在收集垃圾时注册广播以进行清理。
+    */
   def registerBroadcastForCleanup[T](broadcast: Broadcast[T]): Unit = {
     registerForCleanup(broadcast, CleanBroadcast(broadcast.id))
   }

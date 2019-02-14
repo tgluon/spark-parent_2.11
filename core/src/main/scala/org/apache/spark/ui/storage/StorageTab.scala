@@ -27,7 +27,7 @@ import org.apache.spark.ui._
 /** Web UI showing storage status of all RDD's in the given SparkContext. */
 private[ui] class StorageTab(parent: SparkUI) extends SparkUITab(parent, "storage") {
   val listener = parent.storageListener
-
+  // Page绑定到Tab
   attachPage(new StoragePage(this))
   attachPage(new RDDPage(this))
 }
