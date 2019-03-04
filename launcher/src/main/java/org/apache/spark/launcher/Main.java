@@ -48,6 +48,13 @@ class Main {
      * script.
      */
     public static void main(String[] argsArray) throws Exception {
+//        String[] argsArray = {"org.apache.spark.deploy.SparkSubmit",
+//                "--conf spark.serializer=org.apache.spark.serializer.KryoSerializer",
+//                "--class cn.xh.sparktest.DebugMode",
+//                "--master yarn",
+//                "--deploy-mode cluster",
+//                "--num-executors 3"};
+
         // 检查参数
         checkArgument(argsArray.length > 0, "Not enough arguments: missing class name.");
 
@@ -61,7 +68,11 @@ class Main {
         AbstractCommandBuilder builder;
         if (className.equals("org.apache.spark.deploy.SparkSubmit")) {
             try {
-                // 实例化SparkSubmitCommandBuilder
+
+                /**
+                 * 创建一个命令解析器，这里会优先将提交的命令中的 --master之类的参数解析，
+                 * 然后保存到SparkSubmitCommandBuilder中
+                 */
                 builder = new SparkSubmitCommandBuilder(args);
             } catch (IllegalArgumentException e) {
                 printLaunchCommand = false;

@@ -61,6 +61,10 @@ import org.apache.spark.serializer.{DeserializationStream, SerializationStream, 
 import org.apache.spark.util.logging.RollingFileAppender
 
 /**
+  * 保存着线程栈中最靠近栈顶的用户定义的类及最靠近栈底的scala或者spark核心类
+  * 信息，CallSite的shortFrom属性保存着以上信息的简短描述，CallSite的longForm
+  * 属性则保存着以上信息的完整描述。
+  *
   * 通常情况下被用做数据载体，也即是Java里面的VO
   * CallSite represents a place in user code. It can have a short and a long form.
   * 这个对象是一个case class,case class通常情况下被用做数据载体，

@@ -37,6 +37,13 @@ import org.apache.spark.util.Utils
 /**
   * securityManager主要用于权限设置，比如在使用yarn作为资源调度框架时，
   * 用于生成secret key进行登录。该类默认只用一个实例，所以的app使用同一个实例
+  *
+  * SecurityManager主要对账号、权限及身份认证进行设置管理。如果
+  * spark 部署模式为yarn，则需要生成secret_key(密钥)并存入hadoop UGL.
+  * 而在该模式下，需要设置环境变量_SPARK_AUTH_SECREL(优先级更高)或
+  * spark.authenticate.secret属性指定secret key (密钥)。SecurithManger
+  * 还会给系统设置默认的口令认证实例。
+  *
   * Spark class responsible for security.
   * Spark类负责安全性。
   *
@@ -199,35 +206,54 @@ private[spark] class SecurityManager(
   // 允许用户/组拥有查看/修改的权限
   // ACL权限通配符（wildcard的意思通配符）
   private val WILDCARD_ACL = "*"
-  // 这里配置的是属性spark.authenticate,默认为false
+
+  // 是否开启认证，这里配置的是属性spark.authenticate,默认为false
   private val authOn = sparkConf.getBoolean(SecurityManager.SPARK_AUTH_CONF, false)
   // keep spark.ui.acls.enable for backwards compatibility with 1.0
+
+  /**
+    * 是否对账号进行授权检查。通过spark.acls.enable(优先级较高)
+    * 或spark.ui.acls.enable(此属性是为了向前兼容)属性进行配置。
+    * aclsOn的默认是为false。
+    */
   private var aclsOn =
     sparkConf.getBoolean("spark.acls.enable", sparkConf.getBoolean("spark.ui.acls.enable", false))
 
   // admin acls should be set before view or modify acls
   // Admin ACL前应设置查看或修改ACL
+  /** 管理员账号集合。通过spark.admin.acls属性配置，默认为空。 */
   private var adminAcls: Set[String] =
     stringToSet(sparkConf.get("spark.admin.acls", ""))
 
   // admin group acls should be set before view or modify group acls
   // DMIN组ACL前应设置查看或修改组的ACL
+  /**
+    * adminAclsGroups：管理员账号所在组的集合。可以通过spark.admin.acls.groups属性
+    * 配置，默认为空。
+    */
   private var adminAclsGroups: Set[String] =
     stringToSet(sparkConf.get("spark.admin.acls.groups", ""))
-
+  /**
+    * 有查看权限的账号的集合。包括adminAcls、defaultAclUsers及spark.ui.view.acls属性配置的用户
+    */
   private var viewAcls: Set[String] = _
-
+  /** 拥有查看权限账号，所在组的集合。包括admingAclsGroups和spark.ui.view.acls.groups属性配置的用户 */
   private var viewAclsGroups: Set[String] = _
 
   // list of users who have permission to modify the application. This should
   // apply to both UI and CLI for things like killing the application.
-  // 具有修改应用程序权限的用户列表。这应该适用于UI和CLI等用于杀死应用程序的东西。
+  /** 具有修改应用程序权限的用户列表。这应该适用于UI和CLI等用于杀死应用程序的东西。 */
   private var modifyAcls: Set[String] = _
 
+  /** 拥有权限的账号所在组的集合。包括adminAclsGroups和spark.modify.acls.groups属性配置的用户。 */
   private var modifyAclsGroups: Set[String] = _
 
   // always add the current user and SPARK_USER to the viewAcls
   // 随时添加当前用户和spark_user的viewacls
+  /**
+    * 默认用户。包括系统属性user.name指定的用户或系统登录用户或者通过系统环境变量SPARK_USER
+    * 进行设置的用户
+    */
   private val defaultAclUsers = Set[String](System.getProperty("user.name", ""),
     Utils.getCurrentUserName())
 
@@ -237,6 +263,12 @@ private[spark] class SecurityManager(
   setViewAclsGroups(sparkConf.get("spark.ui.view.acls.groups", ""));
   setModifyAclsGroups(sparkConf.get("spark.modify.acls.groups", ""));
   // 想生成secretKey必须spark.authenticate=true，而且要在yarn模式下运行
+  /**
+    * 密钥。在YARN模式下，首先使用sparkCookie宠Hadoop UGI中获取密钥。如果
+    * Hadoop UGI 没有保存密钥，则生成新的密钥(密钥长度可以通过spark.authenticate.secretBitLenght属性指定)
+    * 并存入Hadoop UGL。其他模式下，则需要设置环境变量_SPARK_AUTH_SECRET(优先级跟高)或spark.authenticate.secret
+    * 属性指定
+    */
   private val secretKey = generateSecretKey()
   logInfo("SecurityManager: authentication " + (if (authOn) "enabled" else "disabled") +
     "; ui acls " + (if (aclsOn) "enabled" else "disabled") +
@@ -256,6 +288,7 @@ private[spark] class SecurityManager(
   if (authOn) {
     Authenticator.setDefault(
       //  创建口令认证实例,复写PasswordAuthentication方法,获得用户名和密码
+      /** 设置默认的口令实例Authenticator,它的getpasswordAuthentication方法用于获取用户名和密码 */
       new Authenticator() {
         override def getPasswordAuthentication(): PasswordAuthentication = {
           var passAuth: PasswordAuthentication = null

@@ -51,6 +51,7 @@ import scala.collection.mutable
 /**
   * Whether to submit, kill, or request the status of an application.
   * The latter two operations are currently supported only for standalone and Mesos cluster modes.
+  * 是否提交，终止或请求申请的状态。 后两个操作目前仅支持独立和Mesos集群模式。
   */
 private[deploy] object SparkSubmitAction extends Enumeration {
   type SparkSubmitAction = Value
@@ -64,7 +65,6 @@ private[deploy] object SparkSubmitAction extends Enumeration {
   * a layer over the different cluster managers and deploy modes that Spark supports.
   */
 object SparkSubmit {
-
   // Cluster managers
   private val YARN = 1
   private val STANDALONE = 2
@@ -119,7 +119,6 @@ object SparkSubmit {
   }
 
   // scalastyle:on println
-
   def main(args: Array[String]): Unit = {
     // 封装
     val appArgs = new SparkSubmitArguments(args)
@@ -282,6 +281,7 @@ object SparkSubmit {
       }
 
       // Make sure YARN is included in our build if we're trying to use it
+      /** 如果我们尝试使用它，请确保YARN包含在我们的构建中 */
       if (!Utils.classIsLoadable("org.apache.spark.deploy.yarn.Client") && !Utils.isTesting) {
         printErrorAndExit(
           "Could not load YARN classes. " +
@@ -300,12 +300,13 @@ object SparkSubmit {
 
     // Resolve maven dependencies if there are any and add classpath to jars. Add them to py-files
     // too for packages that include Python code
+    /** 解决maven依赖关系（如果有）并将类路径添加到jar。 对于包含Python代码的包，也将它们添加到py文件中 */
     val exclusions: Seq[String] =
-    if (!StringUtils.isBlank(args.packagesExclusions)) {
-      args.packagesExclusions.split(",")
-    } else {
-      Nil
-    }
+      if (!StringUtils.isBlank(args.packagesExclusions)) {
+        args.packagesExclusions.split(",")
+      } else {
+        Nil
+      }
     val resolvedMavenCoordinates = SparkSubmitUtils.resolveMavenCoordinates(args.packages,
       Option(args.repositories), Option(args.ivyRepoPath), exclusions = exclusions)
     if (!StringUtils.isBlank(resolvedMavenCoordinates)) {
@@ -710,7 +711,8 @@ object SparkSubmit {
         new MutableURLClassLoader(new Array[URL](0),
           Thread.currentThread.getContextClassLoader)
       }
-    // 线程默认类加载器加入不设置采用的是系统类加载器，线程上下文类加载器会基础父类加载器
+
+    /** 线程默认类加载器加入不设置采用的是系统类加载器，线程上下文类加载器会基础父类加载器 */
     Thread.currentThread.setContextClassLoader(loader)
     //  只有在client模式下，用户的jar,--jars上传的jar全部被打包到loader的classpath里面，所以，只要不少包，
     // 无论隐式因引用其他包的类还是现实引用，都会被找到
@@ -752,7 +754,7 @@ object SparkSubmit {
     }
 
     // SPARK-4170
-    //isAssignableFrom 判断App这个类型是否是mainClass类型的父（祖先）类或父（祖先）接口
+    // isAssignableFrom 判断App这个类型是否是mainClass类型的父（祖先）类或父（祖先）接口
     if (classOf[scala.App].isAssignableFrom(mainClass)) {
       printWarning("Subclasses of scala.App may not work correctly. Use a main() method instead.")
     }

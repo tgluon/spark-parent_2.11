@@ -41,8 +41,9 @@ import org.apache.spark.util._
 import org.apache.spark.util.io.ChunkedByteBuffer
 
 /**
+  * Excutor是处理任务的执行器,它依赖于SparkEnv提供的运行时环境
   * Spark executor, backed by a threadpool to run tasks.
-  *
+  * Spark执行器，由线程池支持运行任务。
   * This can be used with Mesos, YARN, and the standalone scheduler.
   * An internal RPC interface is used for communication with the driver,
   * except in the case of Mesos fine-grained mode.
@@ -147,6 +148,7 @@ private[spark] class Executor(
   private var heartbeatFailures = 0
 
   startDriverHeartbeater()
+
   //对于每个task都会创建一个TaksRunner，TaskRunner继承的是java 的多线程中的Runnable接口
   def launchTask(
                   context: ExecutorBackend,

@@ -45,6 +45,9 @@ import org.apache.spark.storage.BlockManagerMessages.BlockManagerHeartbeat
 import org.apache.spark.util._
 
 /**
+  * 负责创建Job，将DAG中的RDD划分到不同的Stage，提交Stage等；
+  * SparkUI中有关job和Stage的监控数据来自DAGScheduler
+  *
   * 实现了面向stage的调度机制的高层调度，它会为每个job计算一个stage的DAG
   * (有向无环图)追踪RDD的stage的输出是否被物化(物化就是说，写入磁盘或者内
   * 存等地方)，并且寻找最少小号(最优、最小)调度机制来运行job。他会将stage
@@ -600,19 +603,18 @@ class DAGScheduler(
                        resultHandler: (Int, U) => Unit,
                        properties: Properties): JobWaiter[U] = {
     // Check to make sure we are not launching a task on a partition that does not exist.
-    // 确认没在不存在的partition上执行任务
+    /** 不存在的partition上执行任务 确认没在 */
     val maxPartitions = rdd.partitions.length
     partitions.find(p => p >= maxPartitions || p < 0).foreach { p =>
       throw new IllegalArgumentException(
         "Attempting to access a non-existent partition: " + p + ". " +
           "Total number of partitions: " + maxPartitions)
     }
-    //递增得到jobId
+    /** 递增得到jobId */
     val jobId = nextJobId.getAndIncrement()
     if (partitions.size == 0) {
       // Return immediately if the job is running 0 tasks
-      //若Job没对任何一个partition执行任务，
-      //则立即返回
+      /** 若Job没对任何一个partition执行任务，则立即返回 */
       return new JobWaiter[U](this, jobId, 0, resultHandler)
     }
 
@@ -649,7 +651,7 @@ class DAGScheduler(
     // which causes concurrent SQL executions to fail if a fork-join pool is used. Note that
     // due to idiosyncrasies in Scala, `awaitPermission` is not actually used anywhere so it's
     // safe to pass in null here. For more detail, see SPARK-13747.
-    //判断job执行结果
+    /** 判断job执行结果 */
     val awaitPermission = null.asInstanceOf[scala.concurrent.CanAwait]
     waiter.completionFuture.ready(Duration.Inf)(awaitPermission)
     waiter.completionFuture.value.get match {
@@ -1759,7 +1761,7 @@ class DAGScheduler(
 }
 
 // eventProcessLoop是一个DAGSchedulerEventProcessLoop类对象，
-// 即一个DAG调度事件处理的监听。eventProcessLoop中调用doOnReceive来进行监听
+/** 即一个DAG调度事件处理的监听。eventProcessLoop中调用doOnReceive来进行监听 */
 private[scheduler] class DAGSchedulerEventProcessLoop(dagScheduler: DAGScheduler)
   extends EventLoop[DAGSchedulerEvent]("dag-scheduler-event-loop") with Logging {
 

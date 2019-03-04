@@ -132,11 +132,29 @@ fi
 # 3.要引用其他的jar包,可以用java -classpath $CLASSPATH:xxxx.jar 主类名称(绝对路径)其中 -classpath 指定需要引入的类。
 
 #执行类文件org.apache.spark.launcher.Main，返回解析后的参数
+
+#$@代表:
+#  --class com.gsww.c3bigdata.main.main \
+#  --deploy-mode cluster\
+#  --master yarn\
+#  --num-executors 40 \
+#  --executor-memory 12G \
+#  --executor-cores 4 \
+#  --driver-memory 2g \
+#  --conf spark.port.maxRetries=100 \
+#  --conf spark.default.parallelism=640 \
+#  --conf spark.storage.memoryFraction=1 \
+#  --conf spark.shuffle.memoryFraction=0.6 \
+#  --conf spark.serializer=org.apache.spark.serializer.KryoSerializer \
+#  --conf spark.driver.extraJavaOptions=-Dlog4j.configuration=log4j-yarn.properties \
+
+#   执行类文件org.apache.spark.launcher.Main，返回解析后的参数
 build_command() {
   "$RUNNER" -Xmx128m -cp "$LAUNCH_CLASSPATH" org.apache.spark.launcher.Main "$@"
   printf "%d\0" $?
 }
 
+# 将build_command方法解析后的参数赋给CMD
 CMD=()
 while IFS= read -d '' -r ARG; do
   CMD+=("$ARG")

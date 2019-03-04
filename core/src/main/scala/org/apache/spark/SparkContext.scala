@@ -70,6 +70,22 @@ import org.apache.spark.util._
   * 每个JVM只能激活一个SparkContext。 你必须在创建一个新的SparkContext之前“停止（）”。 最终可能会删除此限制;
   * 有关详细信息，请参阅SPARK-2243。
   *
+  * SparkContext的初始化步骤:
+  * 创建Spark执行环境SparkEnv；
+  * 创建RDD清理器metadataCleaner；
+  * 创建并初始化SparkUI；
+  * Hadoop相关配置及Executor环境变量的设置
+  * 创建任务调度TaskScheduler；
+  * 创建和启动DAGScheduler；
+  * TaskScheduler的启动；
+  * 初始化块管理器BlockManager（BlockManager是存储体系的主要组件之一，将在第4章介绍）；
+  * 启动测量系统MetricsSystem；
+  * 创建和启动Executor分配管理器ExecutorAllocationManager；
+  * ContextCleaner的创建与启动；
+  * Spark环境更新；
+  * 创建DAGSchedulerSource和BlockManagerSource；
+  * 将SparkContext标记为激活。
+  *
   * @param config a Spark Config object describing the application configuration. Any settings in
   *               this config overrides the default configs as well as system properties.
   *               描述应用程序配置的Spark Config对象。 此配置中的任何设置都会覆盖默认配置以及系统属性。
@@ -258,6 +274,7 @@ class SparkContext(config: SparkConf) extends Logging {
   def isStopped: Boolean = stopped.get()
 
   // An asynchronous listener bus for Spark events
+  //  Spark事件的异步侦听器总线
   private[spark] val listenerBus = new LiveListenerBus(this)
 
   // This function allows components created by SparkEnv to be mocked in unit tests:
@@ -272,14 +289,14 @@ class SparkContext(config: SparkConf) extends Logging {
   private[spark] def env: SparkEnv = _env
 
   // Used to store a URL for each static file/jar together with the file's local timestamp
-  //将Java集合转换为相应的Scala集合
+  // 将Java集合转换为相应的Scala集合
   private[spark] val addedFiles = new ConcurrentHashMap[String, Long]().asScala
   private[spark] val addedJars = new ConcurrentHashMap[String, Long]().asScala
 
   // Keeps track of all persisted RDDs
   // 跟踪持久化rdd
   private[spark] val persistentRdds = {
-    //使用guava框架的MapMaker类来构建ConcurrentHashMap类,并转换成scala的集合类型
+    /** 使用guava框架的MapMaker类来构建ConcurrentHashMap类,并转换成scala的集合类型 */
     val map: ConcurrentMap[Int, RDD[_]] = new MapMaker().weakValues().makeMap[Int, RDD[_]]()
     map.asScala
   }
@@ -338,6 +355,11 @@ class SparkContext(config: SparkConf) extends Logging {
 
   private[spark] def eventLogger: Option[EventLoggingListener] = _eventLogger
 
+  /**
+    * Executor动态分配管理器。可以根据工作负载动态调整Executor的数量，
+    * 在配置spark.dynamicAllocation.enabled属性为true的前提下，在非local
+    * 模式下或者当spark.dynamicAllocation.testing属性为true时启用
+    */
   private[spark] def executorAllocationManager: Option[ExecutorAllocationManager] =
     _executorAllocationManager
 
@@ -450,7 +472,7 @@ class SparkContext(config: SparkConf) extends Logging {
       * 应该在创建SparkEnv之前设置“_jobProgressListener”，因为在创建“SparkEnv”时，
       * 一些消息将被发布到“listenerBus”，我们不应该错过它们。
       */
-    // SparkContext 中添加的 jobListener
+    /** SparkContext 中添加的 jobListener */
     _jobProgressListener = new JobProgressListener(_conf)
     listenerBus.addListener(jobProgressListener)
 
@@ -464,9 +486,17 @@ class SparkContext(config: SparkConf) extends Logging {
       _conf.set("spark.repl.class.uri", replUri)
     }
 
-
+    /**
+      * 提供对作业、Stage等的监控信息，SparkStatusTracker是一个低级的API，
+      * 这意味着只能提供非常脆弱的一致性机制
+      */
     _statusTracker = new SparkStatusTracker(this)
 
+    /**
+      * 利用SparkStatusTracker的API，在控制台展示Stage的进度。
+      * 由于SparkStatusTracker存在一致性问题，所以ConsoleProgressBar
+      * 在控制台的显示往往有一定的延时
+      */
     _progressBar =
       if (_conf.getBoolean("spark.ui.showConsoleProgress", true) && !log.isInfoEnabled) {
         Some(new ConsoleProgressBar(this))
@@ -521,25 +551,33 @@ class SparkContext(config: SparkConf) extends Logging {
 
     // We need to register "HeartbeatReceiver" before "createTaskScheduler" because Executor will
     // retrieve "HeartbeatReceiver" in the constructor. (SPARK-6640)
+    /**
+      * 我们需要在“createTaskScheduler”之前注册“HeartbeatReceiver”，
+      * 因为Executor将在构造函数中检索“HeartbeatReceiver”
+      */
     _heartbeatReceiver = env.rpcEnv.setupEndpoint(
       HeartbeatReceiver.ENDPOINT_NAME, new HeartbeatReceiver(this))
 
-    // Create and start the scheduler
-    //  可以看到，我们是先用函数createTaskScheduler创建了taskScheduler，
-    // 再new了一个DAGScheduler,这个顺序可以改变吗？答案是否定的，我们看
-    // 下DAGScheduler类就知道了：
-    // 创建和启动scheduler
+    /** Create and start the scheduler
+      * 可以看到，我们是先用函数createTaskScheduler创建了taskScheduler，
+      * 再new了一个DAGScheduler,这个顺序可以改变吗？答案是否定的，我们看
+      * 下DAGScheduler类就知道了：创建和启动scheduler
+      * 负责请求集群管理给应用程序分配并运行Executor(一级调度)和给任务分配Executor并运行任务(二级调度)
+      */
     val (sched, ts) = SparkContext.createTaskScheduler(this, master, deployMode)
+
     // standalone模式下实例化的是SparkSchedulerBackend对象
     _schedulerBackend = sched
     _taskScheduler = ts
-    // 实例化DAGScheduler
+
+    /** 实例化DAGScheduler 用于创建job、将DAG中的RDD划分到不同的Stage、提交Stage等 */
     _dagScheduler = new DAGScheduler(this)
+
     _heartbeatReceiver.ask[Boolean](TaskSchedulerIsSet)
 
     // start TaskScheduler after taskScheduler sets DAGScheduler reference in DAGScheduler's
     // constructor
-    // 启动TaskScheduler
+    /** 启动TaskScheduler */
     _taskScheduler.start()
 
     _applicationId = _taskScheduler.applicationId()
@@ -585,6 +623,10 @@ class SparkContext(config: SparkConf) extends Logging {
       }
     _executorAllocationManager.foreach(_.start())
 
+    /**
+      * 上下文清理器,ContextCleaner实际用异步方式清理哪些超出应用域
+      * 范围的RDD、ShuffleDependency和Broadcast等信息
+      */
     _cleaner = if (_conf.getBoolean("spark.cleaner.referenceTracking", true)) {
       Some(new ContextCleaner(this))
     } else {
@@ -1962,8 +2004,8 @@ class SparkContext(config: SparkConf) extends Logging {
   /**
     * Run a function on a given set of partitions in an RDD and pass the results to the given
     * handler function. This is the main entry point for all actions in Spark.
+    * SparkContext的runJob会触发 DAGScheduler的runJob：
     */
-  // SparkContext的runJob会触发 DAGScheduler的runJob：
   def runJob[T, U: ClassTag](
                               rdd: RDD[T],
                               func: (TaskContext, Iterator[T]) => U,
@@ -1978,12 +2020,17 @@ class SparkContext(config: SparkConf) extends Logging {
     if (conf.getBoolean("spark.logLineage", false)) {
       logInfo("RDD's recursive dependencies:\n" + rdd.toDebugString)
     }
-    // 调用SparkContext之前初始化时,创建的DAGScheduler的runjob()方法
+
+    /** 调用SparkContext之前初始化时,创建的DAGScheduler的runjob()方法 */
     dagScheduler.runJob(rdd, cleanedFunc, partitions, callSite, resultHandler, localProperties.get)
     progressBar.foreach(_.finishAll())
-    // 这里的rdd.doCheckpoint()并不是对自己Checkpoint，
-    // 而是递归的回溯parent rdd 检查checkpointData是否
-    // 被定义了，若定义了就将该rdd Checkpoint：
+
+    /**
+      * 这里的rdd.doCheckpoint()并不是对自己Checkpoint，
+      * 而是递归的回溯parent rdd 检查checkpointData是否
+      * 被定义了，若定义了就将该rdd Checkpoint
+      *
+      */
     rdd.doCheckpoint()
   }
 
@@ -2554,8 +2601,8 @@ object SparkContext extends Logging {
   /**
     * Create a task scheduler based on a given master URL.
     * Return a 2-tuple of the scheduler backend and the task scheduler.
+    * 这个方法是为了创建SchedulerBackend和TaskScheduler实例
     */
-  //这个方法是为了创建SchedulerBackend和TaskScheduler实例
   private def createTaskScheduler(
                                    sc: SparkContext,
                                    master: String,
@@ -2595,14 +2642,17 @@ object SparkContext extends Logging {
         val backend = new LocalSchedulerBackend(sc.getConf, scheduler, threadCount)
         scheduler.initialize(backend)
         (backend, scheduler)
-      // standalone模式
+
+      /** standalone模式 */
       case SPARK_REGEX(sparkUrl) =>
-        //创建TaskScheduler
+
+        /** 创建TaskScheduler */
         val scheduler = new TaskSchedulerImpl(sc)
         val masterUrls = sparkUrl.split(",").map("spark://" + _)
-        //创建SchedulerBackend
+        /** 创建SchedulerBackend */
         val backend = new StandaloneSchedulerBackend(scheduler, sc, masterUrls)
-        // 调用TaskScuduler方法的initialize方法进行创建线程池
+
+        /** 调用TaskScuduler方法的initialize方法进行创建线程池 */
         scheduler.initialize(backend)
         (backend, scheduler)
 

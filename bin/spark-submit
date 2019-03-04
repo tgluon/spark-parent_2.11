@@ -37,4 +37,19 @@ export PYTHONHASHSEED=0
 # 执行spark-class脚本，传递参数org.apache.spark.deploy.SparkSubmit 和"$@"
 # 这里$@表示之前spark-submit接收到的全部参数
 
+#$@代表:
+#  --class com.gsww.c3bigdata.main.main \
+#  --deploy-mode cluster\
+#  --master yarn\
+#  --num-executors 40 \
+#  --executor-memory 12G \
+#  --executor-cores 4 \
+#  --driver-memory 2g \
+#  --conf spark.port.maxRetries=100 \
+#  --conf spark.default.parallelism=640 \
+#  --conf spark.storage.memoryFraction=1 \
+#  --conf spark.shuffle.memoryFraction=0.6 \
+#  --conf spark.serializer=org.apache.spark.serializer.KryoSerializer \
+#  --conf spark.driver.extraJavaOptions=-Dlog4j.configuration=log4j-yarn.properties \
+
 exec "${SPARK_HOME}"/bin/spark-class org.apache.spark.deploy.SparkSubmit "$@"

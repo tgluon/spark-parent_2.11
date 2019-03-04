@@ -33,13 +33,14 @@ import org.apache.spark.ui.SparkUI
 import org.apache.spark.ui.jobs.UIData._
 
 /**
- * :: DeveloperApi ::
- * Tracks task-level information to be displayed in the UI.
- *
- * All access to the data structures in this class must be synchronized on the
- * class, since the UI thread and the EventBus loop may otherwise be reading and
- * updating the internal data structures concurrently.
- */
+  * 作业进度监听器
+  * :: DeveloperApi ::
+  * Tracks task-level information to be displayed in the UI.
+  *
+  * All access to the data structures in this class must be synchronized on the
+  * class, since the UI thread and the EventBus loop may otherwise be reading and
+  * updating the internal data structures concurrently.
+  */
 @DeveloperApi
 class JobProgressListener(conf: SparkConf) extends SparkListener with Logging {
 
@@ -431,15 +432,15 @@ class JobProgressListener(conf: SparkConf) extends SparkListener with Logging {
   }
 
   /**
-   * Upon receiving new metrics for a task, updates the per-stage and per-executor-per-stage
-   * aggregate metrics by calculating deltas between the currently recorded metrics and the new
-   * metrics.
-   */
+    * Upon receiving new metrics for a task, updates the per-stage and per-executor-per-stage
+    * aggregate metrics by calculating deltas between the currently recorded metrics and the new
+    * metrics.
+    */
   def updateAggregateMetrics(
-      stageData: StageUIData,
-      execId: String,
-      taskMetrics: TaskMetrics,
-      oldMetrics: Option[TaskMetricsUIData]) {
+                              stageData: StageUIData,
+                              execId: String,
+                              taskMetrics: TaskMetrics,
+                              oldMetrics: Option[TaskMetricsUIData]) {
     val execSummary = stageData.executorSummary.getOrElseUpdate(execId, new ExecutorSummary)
 
     val shuffleWriteDelta =
@@ -560,13 +561,13 @@ class JobProgressListener(conf: SparkConf) extends SparkListener with Logging {
   }
 
   /**
-   * For testing only. Wait until at least `numExecutors` executors are up, or throw
-   * `TimeoutException` if the waiting time elapsed before `numExecutors` executors up.
-   * Exposed for testing.
-   *
-   * @param numExecutors the number of executors to wait at least
-   * @param timeout time to wait in milliseconds
-   */
+    * For testing only. Wait until at least `numExecutors` executors are up, or throw
+    * `TimeoutException` if the waiting time elapsed before `numExecutors` executors up.
+    * Exposed for testing.
+    *
+    * @param numExecutors the number of executors to wait at least
+    * @param timeout      time to wait in milliseconds
+    */
   private[spark] def waitUntilExecutorsUp(numExecutors: Int, timeout: Long): Unit = {
     val finishTime = System.currentTimeMillis() + timeout
     while (System.currentTimeMillis() < finishTime) {

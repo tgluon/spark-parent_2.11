@@ -43,6 +43,7 @@ import org.apache.spark.storage._
 import org.apache.spark.util.{RpcUtils, Utils}
 
 /**
+  * Spark运行时环境
   * :: DeveloperApi ::
   * Holds all the runtime environment objects for a running Spark instance (either master or worker),
   * including the serializer, RpcEnv, block manager, map output tracker, etc. Currently
@@ -51,6 +52,7 @@ import org.apache.spark.util.{RpcUtils, Utils}
   *
   * NOTE: This is not intended for external use. This is exposed for Shark and may be made private
   * in a future release.
+  * 这不适合外部使用。 这是针对Shark的，并且可能在将来的版本中变为私有。
   */
 @DeveloperApi
 class SparkEnv(
@@ -163,6 +165,7 @@ object SparkEnv extends Logging {
     assert(conf.contains(DRIVER_HOST_ADDRESS),
       s"${DRIVER_HOST_ADDRESS.key} is not set on the driver!")
     assert(conf.contains("spark.driver.port"), "spark.driver.port is not set on the driver!")
+    // driver实例的host
     val bindAddress = conf.get(DRIVER_BIND_ADDRESS)
     val advertiseAddress = conf.get(DRIVER_HOST_ADDRESS)
     val port = conf.get("spark.driver.port").toInt
@@ -233,6 +236,13 @@ object SparkEnv extends Logging {
       assert(listenerBus != null, "Attempted to create driver SparkEnv with null listener bus!")
     }
 
+    /**
+      * SecurityManager主要对账号、权限及身份认证进行设置管理。如果
+      * spark 部署模式为yarn，则需要生成secret_key(密钥)并存入hadoop UGL.
+      * 而在该模式下，需要设置环境变量_SPARK_AUTH_SECREL(优先级更高)或
+      * spark.authenticate.secret属性指定secret key (密钥)。SecurithManger
+      * 还会给系统设置默认的口令认证实例。
+      */
     val securityManager = new SecurityManager(conf, ioEncryptionKey)
     ioEncryptionKey.foreach { _ =>
       // 检查是否应启用网络加密。
