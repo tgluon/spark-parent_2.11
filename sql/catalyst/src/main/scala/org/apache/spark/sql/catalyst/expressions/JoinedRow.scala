@@ -23,9 +23,10 @@ import org.apache.spark.sql.types._
 import org.apache.spark.unsafe.types.{CalendarInterval, UTF8String}
 
 /**
- * A mutable wrapper that makes two rows appear as a single concatenated row.  Designed to
- * be instantiated once per thread and reused.
- */
+  * A mutable wrapper that makes two rows appear as a single concatenated row.  Designed to
+  * be instantiated once per thread and reused.
+  * 作用：用于join操作，将两个InternalRow放在一起成新的InternalRow，使用时注意构造参数的顺序
+  */
 class JoinedRow extends InternalRow {
   private[this] var row1: InternalRow = _
   private[this] var row2: InternalRow = _

@@ -43,6 +43,13 @@ public interface SpecializedGetters {
 
   double getDouble(int ordinal);
 
+  /**
+   *
+   * @param ordinal 顺序数
+   * @param precision 精确
+   * @param scale 比例
+   * @return Decimal
+   */
   Decimal getDecimal(int ordinal, int precision, int scale);
 
   UTF8String getUTF8String(int ordinal);

@@ -43,19 +43,20 @@ import org.apache.spark.util.Utils
 private class MutableInt(var i: Int)
 
 case class Origin(
-  line: Option[Int] = None,
-  startPosition: Option[Int] = None)
+                   line: Option[Int] = None,
+                   startPosition: Option[Int] = None)
 
 /**
- * Provides a location for TreeNodes to ask about the context of their origin.  For example, which
- * line of code is currently being parsed.
- */
+  * Provides a location for TreeNodes to ask about the context of their origin.  For example, which
+  * line of code is currently being parsed.
+  */
 object CurrentOrigin {
   private val value = new ThreadLocal[Origin]() {
     override def initialValue: Origin = Origin()
   }
 
   def get: Origin = value.get()
+
   def set(o: Origin): Unit = value.set(o)
 
   def reset(): Unit = value.set(Origin())
@@ -67,43 +68,51 @@ object CurrentOrigin {
 
   def withOrigin[A](o: Origin)(f: => A): A = {
     set(o)
-    val ret = try f finally { reset() }
+    val ret = try f finally {
+      reset()
+    }
     reset()
     ret
   }
 }
 
 // scalastyle:off
+/**
+  * TreeNode一直在内存里维护，不会dump到磁盘以文件形式存储，且无论
+  * 在映射逻辑执行计划阶段，还是优化逻辑阶段，树的修改都是以替换已有
+  * 节点的方式进行的
+  */
 abstract class TreeNode[BaseType <: TreeNode[BaseType]] extends Product {
-// scalastyle:on
+  // scalastyle:on
   self: BaseType =>
 
   val origin: Origin = CurrentOrigin.get
 
   /**
-   * Returns a Seq of the children of this node.
-   * Children should not change. Immutability required for containsChild optimization
-   */
+    * Returns a Seq of the children of this node.
+    * Children should not change. Immutability required for containsChild optimization
+    */
   def children: Seq[BaseType]
 
   lazy val containsChild: Set[TreeNode[_]] = children.toSet
 
   private lazy val _hashCode: Int = scala.util.hashing.MurmurHash3.productHash(this)
+
   override def hashCode(): Int = _hashCode
 
   /**
-   * Faster version of equality which short-circuits when two treeNodes are the same instance.
-   * We don't just override Object.equals, as doing so prevents the scala compiler from
-   * generating case class `equals` methods
-   */
+    * Faster version of equality which short-circuits when two treeNodes are the same instance.
+    * We don't just override Object.equals, as doing so prevents the scala compiler from
+    * generating case class `equals` methods
+    */
   def fastEquals(other: TreeNode[_]): Boolean = {
     this.eq(other) || this == other
   }
 
   /**
-   * Find the first [[TreeNode]] that satisfies the condition specified by `f`.
-   * The condition is recursively applied to this node and all of its children (pre-order).
-   */
+    * Find the first [[TreeNode]] that satisfies the condition specified by `f`.
+    * The condition is recursively applied to this node and all of its children (pre-order).
+    */
   def find(f: BaseType => Boolean): Option[BaseType] = if (f(this)) {
     Some(this)
   } else {
@@ -111,28 +120,31 @@ abstract class TreeNode[BaseType <: TreeNode[BaseType]] extends Product {
   }
 
   /**
-   * Runs the given function on this node and then recursively on [[children]].
-   * @param f the function to be applied to each node in the tree.
-   */
+    * Runs the given function on this node and then recursively on [[children]].
+    *
+    * @param f the function to be applied to each node in the tree.
+    */
   def foreach(f: BaseType => Unit): Unit = {
     f(this)
     children.foreach(_.foreach(f))
   }
 
   /**
-   * Runs the given function recursively on [[children]] then on this node.
-   * @param f the function to be applied to each node in the tree.
-   */
+    * Runs the given function recursively on [[children]] then on this node.
+    *
+    * @param f the function to be applied to each node in the tree.
+    */
   def foreachUp(f: BaseType => Unit): Unit = {
     children.foreach(_.foreachUp(f))
     f(this)
   }
 
   /**
-   * Returns a Seq containing the result of applying the given function to each
-   * node in this tree in a preorder traversal.
-   * @param f the function to be applied.
-   */
+    * Returns a Seq containing the result of applying the given function to each
+    * node in this tree in a preorder traversal.
+    *
+    * @param f the function to be applied.
+    */
   def map[A](f: BaseType => A): Seq[A] = {
     val ret = new collection.mutable.ArrayBuffer[A]()
     foreach(ret += f(_))
@@ -140,9 +152,9 @@ abstract class TreeNode[BaseType <: TreeNode[BaseType]] extends Product {
   }
 
   /**
-   * Returns a Seq by applying a function to all nodes in this tree and using the elements of the
-   * resulting collections.
-   */
+    * Returns a Seq by applying a function to all nodes in this tree and using the elements of the
+    * resulting collections.
+    */
   def flatMap[A](f: BaseType => TraversableOnce[A]): Seq[A] = {
     val ret = new collection.mutable.ArrayBuffer[A]()
     foreach(ret ++= f(_))
@@ -150,9 +162,9 @@ abstract class TreeNode[BaseType <: TreeNode[BaseType]] extends Product {
   }
 
   /**
-   * Returns a Seq containing the result of applying a partial function to all elements in this
-   * tree on which the function is defined.
-   */
+    * Returns a Seq containing the result of applying a partial function to all elements in this
+    * tree on which the function is defined.
+    */
   def collect[B](pf: PartialFunction[BaseType, B]): Seq[B] = {
     val ret = new collection.mutable.ArrayBuffer[B]()
     val lifted = pf.lift
@@ -161,16 +173,16 @@ abstract class TreeNode[BaseType <: TreeNode[BaseType]] extends Product {
   }
 
   /**
-   * Returns a Seq containing the leaves in this tree.
-   */
+    * Returns a Seq containing the leaves in this tree.
+    */
   def collectLeaves(): Seq[BaseType] = {
     this.collect { case p if p.children.isEmpty => p }
   }
 
   /**
-   * Finds and returns the first [[TreeNode]] of the tree for which the given partial function
-   * is defined (pre-order), and applies the partial function to it.
-   */
+    * Finds and returns the first [[TreeNode]] of the tree for which the given partial function
+    * is defined (pre-order), and applies the partial function to it.
+    */
   def collectFirst[B](pf: PartialFunction[BaseType, B]): Option[B] = {
     val lifted = pf.lift
     lifted(this).orElse {
@@ -179,8 +191,8 @@ abstract class TreeNode[BaseType <: TreeNode[BaseType]] extends Product {
   }
 
   /**
-   * Efficient alternative to `productIterator.map(f).toArray`.
-   */
+    * Efficient alternative to `productIterator.map(f).toArray`.
+    */
   protected def mapProductIterator[B: ClassTag](f: Any => B): Array[B] = {
     val arr = Array.ofDim[B](productArity)
     var i = 0
@@ -192,9 +204,9 @@ abstract class TreeNode[BaseType <: TreeNode[BaseType]] extends Product {
   }
 
   /**
-   * Returns a copy of this node with the children replaced.
-   * TODO: Validate somewhere (in debug mode?) that children are ordered correctly.
-   */
+    * Returns a copy of this node with the children replaced.
+    * TODO: Validate somewhere (in debug mode?) that children are ordered correctly.
+    */
   def withNewChildren(newChildren: Seq[BaseType]): BaseType = {
     assert(newChildren.size == children.size, "Incorrect number of children")
     var changed = false
@@ -246,23 +258,23 @@ abstract class TreeNode[BaseType <: TreeNode[BaseType]] extends Product {
   }
 
   /**
-   * Returns a copy of this node where `rule` has been recursively applied to the tree.
-   * When `rule` does not apply to a given node it is left unchanged.
-   * Users should not expect a specific directionality. If a specific directionality is needed,
-   * transformDown or transformUp should be used.
-   *
-   * @param rule the function use to transform this nodes children
-   */
+    * Returns a copy of this node where `rule` has been recursively applied to the tree.
+    * When `rule` does not apply to a given node it is left unchanged.
+    * Users should not expect a specific directionality. If a specific directionality is needed,
+    * transformDown or transformUp should be used.
+    *
+    * @param rule the function use to transform this nodes children
+    */
   def transform(rule: PartialFunction[BaseType, BaseType]): BaseType = {
     transformDown(rule)
   }
 
   /**
-   * Returns a copy of this node where `rule` has been recursively applied to it and all of its
-   * children (pre-order). When `rule` does not apply to a given node it is left unchanged.
-   *
-   * @param rule the function used to transform this nodes children
-   */
+    * Returns a copy of this node where `rule` has been recursively applied to it and all of its
+    * children (pre-order). When `rule` does not apply to a given node it is left unchanged.
+    *
+    * @param rule the function used to transform this nodes children
+    */
   def transformDown(rule: PartialFunction[BaseType, BaseType]): BaseType = {
     val afterRule = CurrentOrigin.withOrigin(origin) {
       rule.applyOrElse(this, identity[BaseType])
@@ -277,12 +289,12 @@ abstract class TreeNode[BaseType <: TreeNode[BaseType]] extends Product {
   }
 
   /**
-   * Returns a copy of this node where `rule` has been recursively applied first to all of its
-   * children and then itself (post-order). When `rule` does not apply to a given node, it is left
-   * unchanged.
-   *
-   * @param rule the function use to transform this nodes children
-   */
+    * Returns a copy of this node where `rule` has been recursively applied first to all of its
+    * children and then itself (post-order). When `rule` does not apply to a given node, it is left
+    * unchanged.
+    *
+    * @param rule the function use to transform this nodes children
+    */
   def transformUp(rule: PartialFunction[BaseType, BaseType]): BaseType = {
     val afterRuleOnChildren = mapChildren(_.transformUp(rule))
     if (this fastEquals afterRuleOnChildren) {
@@ -297,8 +309,8 @@ abstract class TreeNode[BaseType <: TreeNode[BaseType]] extends Product {
   }
 
   /**
-   * Returns a copy of this node where `f` has been applied to all the nodes children.
-   */
+    * Returns a copy of this node where `f` has been applied to all the nodes children.
+    */
   def mapChildren(f: BaseType => BaseType): BaseType = {
     if (children.nonEmpty) {
       var changed = false
@@ -361,18 +373,20 @@ abstract class TreeNode[BaseType <: TreeNode[BaseType]] extends Product {
   }
 
   /**
-   * Args to the constructor that should be copied, but not transformed.
-   * These are appended to the transformed args automatically by makeCopy
-   * @return
-   */
+    * Args to the constructor that should be copied, but not transformed.
+    * These are appended to the transformed args automatically by makeCopy
+    *
+    * @return
+    */
   protected def otherCopyArgs: Seq[AnyRef] = Nil
 
   /**
-   * Creates a copy of this type of tree node after a transformation.
-   * Must be overridden by child classes that have constructor arguments
-   * that are not present in the productIterator.
-   * @param newArgs the new product arguments.
-   */
+    * Creates a copy of this type of tree node after a transformation.
+    * Must be overridden by child classes that have constructor arguments
+    * that are not present in the productIterator.
+    *
+    * @param newArgs the new product arguments.
+    */
   def makeCopy(newArgs: Array[AnyRef]): BaseType = attachTree(this, "makeCopy") {
     // Skip no-arg constructors that are just there for kryo.
     val ctors = getClass.getConstructors.filter(_.getParameterTypes.size != 0)
@@ -417,14 +431,14 @@ abstract class TreeNode[BaseType <: TreeNode[BaseType]] extends Product {
   }
 
   /**
-   * Returns the name of this type of TreeNode.  Defaults to the class name.
-   * Note that we remove the "Exec" suffix for physical operators here.
-   */
+    * Returns the name of this type of TreeNode.  Defaults to the class name.
+    * Note that we remove the "Exec" suffix for physical operators here.
+    */
   def nodeName: String = getClass.getSimpleName.replaceAll("Exec$", "")
 
   /**
-   * The arguments that should be included in the arg string.  Defaults to the `productIterator`.
-   */
+    * The arguments that should be included in the arg string.  Defaults to the `productIterator`.
+    */
   protected def stringArgs: Iterator[Any] = productIterator
 
   private lazy val allChildren: Set[TreeNode[_]] = (children ++ innerChildren).toSet[TreeNode[_]]
@@ -464,31 +478,31 @@ abstract class TreeNode[BaseType <: TreeNode[BaseType]] extends Product {
   }
 
   /**
-   * Returns a string representation of the nodes in this tree, where each operator is numbered.
-   * The numbers can be used with [[TreeNode.apply]] to easily access specific subtrees.
-   *
-   * The numbers are based on depth-first traversal of the tree (with innerChildren traversed first
-   * before children).
-   */
+    * Returns a string representation of the nodes in this tree, where each operator is numbered.
+    * The numbers can be used with [[TreeNode.apply]] to easily access specific subtrees.
+    *
+    * The numbers are based on depth-first traversal of the tree (with innerChildren traversed first
+    * before children).
+    */
   def numberedTreeString: String =
     treeString.split("\n").zipWithIndex.map { case (line, i) => f"$i%02d $line" }.mkString("\n")
 
   /**
-   * Returns the tree node at the specified number, used primarily for interactive debugging.
-   * Numbers for each node can be found in the [[numberedTreeString]].
-   *
-   * Note that this cannot return BaseType because logical plan's plan node might return
-   * physical plan for innerChildren, e.g. in-memory relation logical plan node has a reference
-   * to the physical plan node it is referencing.
-   */
+    * Returns the tree node at the specified number, used primarily for interactive debugging.
+    * Numbers for each node can be found in the [[numberedTreeString]].
+    *
+    * Note that this cannot return BaseType because logical plan's plan node might return
+    * physical plan for innerChildren, e.g. in-memory relation logical plan node has a reference
+    * to the physical plan node it is referencing.
+    */
   def apply(number: Int): TreeNode[_] = getNodeNumbered(new MutableInt(number)).orNull
 
   /**
-   * Returns the tree node at the specified number, used primarily for interactive debugging.
-   * Numbers for each node can be found in the [[numberedTreeString]].
-   *
-   * This is a variant of [[apply]] that returns the node as BaseType (if the type matches).
-   */
+    * Returns the tree node at the specified number, used primarily for interactive debugging.
+    * Numbers for each node can be found in the [[numberedTreeString]].
+    *
+    * This is a variant of [[apply]] that returns the node as BaseType (if the type matches).
+    */
   def p(number: Int): BaseType = apply(number).asInstanceOf[BaseType]
 
   private def getNodeNumbered(number: MutableInt): Option[TreeNode[_]] = {
@@ -506,26 +520,26 @@ abstract class TreeNode[BaseType <: TreeNode[BaseType]] extends Product {
   }
 
   /**
-   * All the nodes that should be shown as a inner nested tree of this node.
-   * For example, this can be used to show sub-queries.
-   */
+    * All the nodes that should be shown as a inner nested tree of this node.
+    * For example, this can be used to show sub-queries.
+    */
   protected def innerChildren: Seq[TreeNode[_]] = Seq.empty
 
   /**
-   * Appends the string represent of this node and its children to the given StringBuilder.
-   *
-   * The `i`-th element in `lastChildren` indicates whether the ancestor of the current node at
-   * depth `i + 1` is the last child of its own parent node.  The depth of the root node is 0, and
-   * `lastChildren` for the root node should be empty.
-   *
-   * Note that this traversal (numbering) order must be the same as [[getNodeNumbered]].
-   */
+    * Appends the string represent of this node and its children to the given StringBuilder.
+    *
+    * The `i`-th element in `lastChildren` indicates whether the ancestor of the current node at
+    * depth `i + 1` is the last child of its own parent node.  The depth of the root node is 0, and
+    * `lastChildren` for the root node should be empty.
+    *
+    * Note that this traversal (numbering) order must be the same as [[getNodeNumbered]].
+    */
   def generateTreeString(
-      depth: Int,
-      lastChildren: Seq[Boolean],
-      builder: StringBuilder,
-      verbose: Boolean,
-      prefix: String = ""): StringBuilder = {
+                          depth: Int,
+                          lastChildren: Seq[Boolean],
+                          builder: StringBuilder,
+                          verbose: Boolean,
+                          prefix: String = ""): StringBuilder = {
 
     if (depth > 0) {
       lastChildren.init.foreach { isLast =>
@@ -556,11 +570,11 @@ abstract class TreeNode[BaseType <: TreeNode[BaseType]] extends Product {
   }
 
   /**
-   * Returns a 'scala code' representation of this `TreeNode` and its children.  Intended for use
-   * when debugging where the prettier toString function is obfuscating the actual structure. In the
-   * case of 'pure' `TreeNodes` that only contain primitives and other TreeNodes, the result can be
-   * pasted in the REPL to build an equivalent Tree.
-   */
+    * Returns a 'scala code' representation of this `TreeNode` and its children.  Intended for use
+    * when debugging where the prettier toString function is obfuscating the actual structure. In the
+    * case of 'pure' `TreeNodes` that only contain primitives and other TreeNodes, the result can be
+    * pasted in the REPL to build an equivalent Tree.
+    */
   def asCode: String = {
     val args = productIterator.map {
       case tn: TreeNode[_] => tn.asCode
